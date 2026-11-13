@@ -1,0 +1,1850 @@
+<!-- Toast Notification -->
+@if (stateService.toastMessage(); as toast) {
+  <div class="fixed bottom-5 right-5 z-50 no-print flex items-center gap-3 px-4 py-3 rounded-xl shadow-2xl border text-sm font-medium transition-all"
+       [ngClass]="{
+         'bg-emerald-950/95 border-emerald-500/60 text-emerald-200': toast.type === 'success',
+         'bg-indigo-950/95 border-indigo-500/60 text-indigo-200': toast.type === 'info',
+         'bg-amber-950/95 border-amber-500/60 text-amber-200': toast.type === 'warning',
+         'bg-rose-950/95 border-rose-500/60 text-rose-200': toast.type === 'error'
+       }">
+    <span>{{ toast.text }}</span>
+    <button type="button" (click)="stateService.toastMessage.set(null)" class="text-slate-400 hover:text-white ml-2">✕</button>
+  </div>
+}
+
+<!-- 7.1 HEADER SUPERIORE (sticky top-0) -->
+<header class="sticky top-0 z-40 bg-slate-900/95 backdrop-blur-md border-b border-slate-800 shadow-lg no-print">
+  <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+    
+    <!-- Sinistra: Selettore immobile a 2 pulsanti -->
+    <div class="flex items-center gap-2 bg-slate-950 p-1.5 rounded-xl border border-slate-800">
+      <button
+        type="button"
+        (click)="selectProperty('greta_garbo')"
+        class="px-3.5 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-2"
+        [ngClass]="activeProperty().id === 'greta_garbo'
+          ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
+          : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'">
+        <span>🏠 Via Greta Garbo 13</span>
+      </button>
+      <button
+        type="button"
+        (click)="selectProperty('marilyn_monroe')"
+        class="px-3.5 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-2"
+        [ngClass]="activeProperty().id === 'marilyn_monroe'
+          ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
+          : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'">
+        <span>🏡 Via Marilyn Monroe 150</span>
+      </button>
+    </div>
+
+    <!-- Destra: Navigazione a 3 schede + Pulsanti Azione -->
+    <div class="flex flex-wrap items-center gap-2.5">
+      <!-- 3 Schede -->
+      <nav class="flex items-center gap-1 bg-slate-950 p-1.5 rounded-xl border border-slate-800">
+        <button
+          type="button"
+          (click)="selectTab('calcolo')"
+          class="px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all"
+          [ngClass]="activeTab() === 'calcolo'
+            ? 'bg-slate-800 text-white shadow'
+            : 'text-slate-400 hover:text-slate-200'">
+          🧮 Calcolo &amp; Criteri
+        </button>
+
+        <button
+          type="button"
+          (click)="selectTab('storico')"
+          class="px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5"
+          [ngClass]="activeTab() === 'storico'
+            ? 'bg-slate-800 text-white shadow'
+            : 'text-slate-400 hover:text-slate-200'">
+          <span>📊 Storico &amp; Bonifici</span>
+          <span class="px-1.5 py-0.5 text-[11px] rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-bold">
+            {{ activeProperty().periods.length }}
+          </span>
+        </button>
+
+        <button
+          type="button"
+          (click)="selectTab('pdf')"
+          class="px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all"
+          [ngClass]="activeTab() === 'pdf'
+            ? 'bg-slate-800 text-white shadow'
+            : 'text-slate-400 hover:text-slate-200'">
+          📄 Foglio PDF Inquilini
+        </button>
+      </nav>
+
+      <!-- Pulsanti Azione: Salva Modifiche, Reset, Stampa PDF, Impostazioni -->
+      <div class="flex items-center gap-2">
+        <button
+          type="button"
+          (click)="manualSaveChanges()"
+          class="px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 shadow-md"
+          [ngClass]="stateService.hasUnsavedChanges()
+            ? 'bg-amber-500 text-slate-950 hover:bg-amber-400 shadow-amber-500/25'
+            : 'bg-indigo-600 text-white hover:bg-indigo-500 shadow-indigo-600/20'">
+          @if (stateService.hasUnsavedChanges()) {
+            <span class="w-2.5 h-2.5 rounded-full bg-slate-950 unsaved-dot inline-block"></span>
+          }
+          <span>💾 Salva Modifiche</span>
+        </button>
+
+        <button
+          type="button"
+          (click)="revertToLastSavedState()"
+          title="Annulla modifiche non salvate e torna all'ultimo salvataggio"
+          class="px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-all">
+          ↩️ Reset
+        </button>
+
+        <button
+          type="button"
+          (click)="printPdfSheet()"
+          class="px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-emerald-600 hover:bg-emerald-500 text-white shadow-md shadow-emerald-600/20 transition-all">
+          🖨️ Stampa PDF
+        </button>
+
+        <button
+          type="button"
+          (click)="openSettingsModal()"
+          title="Esporta / Importa Backup Dati JSON"
+          class="p-2 rounded-xl text-xs sm:text-sm font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-all">
+          🗂️
+        </button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- CONTENUTO PRINCIPALE -->
+<main class="max-w-7xl mx-auto px-4 py-6">
+
+  <!-- =========================================================================
+       7.2 VISTA 1 — CALCOLO & CRITERI (#tab-calcolo)
+       ========================================================================= -->
+  @if (activeTab() === 'calcolo') {
+    <section id="tab-calcolo" class="space-y-6">
+
+      <!-- 1. BARRA PERIODO + 3 CARD KPI IN TEMPO REALE -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-xl space-y-5">
+        <div class="flex flex-wrap items-center justify-between gap-4">
+          
+          <!-- Selettore Periodo + Nuovo + Elimina -->
+          <div class="flex flex-wrap items-center gap-2.5">
+            <label class="text-xs font-bold uppercase tracking-wider text-slate-400">Periodo Attivo:</label>
+            <select
+              [ngModel]="activePeriod().id"
+              (ngModelChange)="onSelectPeriod($event)"
+              class="bg-slate-950 border border-slate-700 text-white text-sm font-semibold rounded-xl px-3.5 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+              @for (p of activeProperty().periods; track p.id) {
+                <option [value]="p.id">
+                  {{ p.name }} ({{ p.status === 'PAGATO' ? '✅ Pagato' : '⏳ Da saldare' }})
+                </option>
+              }
+            </select>
+
+            <button
+              type="button"
+              (click)="openNewPeriodModal()"
+              class="px-3 py-2 rounded-xl text-xs font-bold bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/40 transition-all">
+              ➕ Nuovo
+            </button>
+
+            <button
+              type="button"
+              (click)="deleteActivePeriod()"
+              title="Elimina periodo selezionato"
+              class="px-2.5 py-2 rounded-xl text-xs font-bold bg-rose-950/60 hover:bg-rose-900/70 text-rose-300 border border-rose-800/50 transition-all">
+              🗑️
+            </button>
+          </div>
+
+          <!-- Date Dal / Al -->
+          <div class="flex flex-wrap items-center gap-3">
+            <div class="flex items-center gap-1.5">
+              <span class="text-xs text-slate-400 font-medium">Dal:</span>
+              <input
+                type="text"
+                [(ngModel)]="activePeriod().dateStart"
+                (ngModelChange)="onUtilityInput()"
+                placeholder="gg/mm/aaaa"
+                class="w-28 bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500" />
+            </div>
+            <div class="flex items-center gap-1.5">
+              <span class="text-xs text-slate-400 font-medium">Al:</span>
+              <input
+                type="text"
+                [(ngModel)]="activePeriod().dateEnd"
+                (ngModelChange)="onUtilityInput()"
+                placeholder="gg/mm/aaaa"
+                class="w-28 bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500" />
+            </div>
+          </div>
+        </div>
+
+        <!-- 3 Card KPI in Tempo Reale -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <!-- Card 1: Totale Bollette -->
+          <div class="bg-slate-950/90 border border-slate-800 rounded-xl p-4 flex flex-col justify-between">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Totale Bollette Periodo</span>
+              <span class="text-xs px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-medium">{{ activePeriod().name }}</span>
+            </div>
+            <div class="mt-2 text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+              {{ formatEuro(activePeriodSummary().totalBill) }} €
+            </div>
+            <div class="mt-2 text-xs text-slate-400 flex items-center gap-3">
+              <span>💡 {{ formatEuro(activePeriodSummary().luce.billAmount) }} €</span>
+              <span>🔥 {{ formatEuro(activePeriodSummary().gas.billAmount) }} €</span>
+              <span>💧 {{ formatEuro(activePeriodSummary().acqua.billAmount) }} €</span>
+            </div>
+          </div>
+
+          <!-- Card 2: Quota Piano Sotto (Indaco) -->
+          <div class="bg-indigo-950/40 border border-indigo-500/40 rounded-xl p-4 flex flex-col justify-between">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold uppercase tracking-wider text-indigo-300">
+                Quota Piano Sotto ({{ activeProperty().labelUs }})
+              </span>
+              <span class="text-xs px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-200 font-semibold">Proprietà</span>
+            </div>
+            <div class="mt-2 text-2xl sm:text-3xl font-extrabold text-indigo-200 tracking-tight">
+              {{ formatEuro(activePeriodSummary().totalUs) }} €
+            </div>
+            <div class="mt-2 text-xs text-indigo-300/80 flex items-center gap-3">
+              <span>💡 {{ formatEuro(activePeriodSummary().luce.shareUs) }} €</span>
+              <span>🔥 {{ formatEuro(activePeriodSummary().gas.shareUs) }} €</span>
+              <span>💧 {{ formatEuro(activePeriodSummary().acqua.shareUs) }} €</span>
+            </div>
+          </div>
+
+          <!-- Card 3: Da Pagare Inquilini (Verde Smeraldo con Pill Cliccabile) -->
+          <div class="bg-emerald-950/40 border border-emerald-500/40 rounded-xl p-4 flex flex-col justify-between">
+            <div class="flex items-center justify-between gap-2">
+              <span class="text-xs font-bold uppercase tracking-wider text-emerald-300">
+                Da Pagare Inquilini ({{ activeProperty().labelTenant }})
+              </span>
+              <button
+                type="button"
+                (click)="togglePeriodStatus(activePeriod())"
+                class="px-2.5 py-1 rounded-full text-xs font-extrabold transition-all cursor-pointer border"
+                [ngClass]="activePeriod().status === 'PAGATO'
+                  ? 'bg-emerald-500/20 text-emerald-200 border-emerald-400/50 hover:bg-emerald-500/30'
+                  : 'bg-amber-500/20 text-amber-200 border-amber-400/50 hover:bg-amber-500/30'">
+                {{ activePeriod().status === 'PAGATO' ? '✅ PAGATO' : '⏳ DA SALDARE' }}
+              </button>
+            </div>
+            <div class="mt-2 text-2xl sm:text-3xl font-extrabold text-emerald-300 tracking-tight">
+              {{ formatEuro(activePeriodSummary().totalTenant) }} €
+            </div>
+            <div class="mt-2 text-xs text-emerald-300/80 flex items-center gap-3">
+              <span>💡 {{ formatEuro(activePeriodSummary().luce.shareTenant) }} €</span>
+              <span>🔥 {{ formatEuro(activePeriodSummary().gas.shareTenant) }} €</span>
+              <span>💧 {{ formatEuro(activePeriodSummary().acqua.shareTenant) }} €</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Note del Periodo -->
+        <div class="flex flex-col sm:flex-row sm:items-center gap-2 pt-1">
+          <label class="text-xs font-bold uppercase tracking-wider text-slate-400 whitespace-nowrap">📝 Note Mese:</label>
+          <input
+            type="text"
+            [(ngModel)]="activePeriod().notes"
+            (ngModelChange)="onUtilityInput()"
+            placeholder="Annotazioni sul periodo, letture o pagamenti..."
+            class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500" />
+        </div>
+      </div>
+
+      <!-- 2. BOX UNICO DI CARICAMENTO (#unified-dropzone) -->
+      <div
+        id="unified-dropzone"
+        (dragover)="onDragOver($event)"
+        (dragleave)="onDragLeave($event)"
+        (drop)="onDropFiles($event)"
+        class="bg-slate-900 border-2 border-dashed rounded-2xl p-5 transition-all"
+        [ngClass]="isDraggingOver()
+          ? 'border-indigo-400 bg-indigo-950/30'
+          : 'border-slate-700 hover:border-slate-600'">
+        
+        <div class="flex flex-col md:flex-row items-center justify-between gap-4">
+          <div class="flex items-center gap-4">
+            <div class="w-12 h-12 rounded-2xl bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-2xl">
+              📂
+            </div>
+            <div>
+              <div class="flex flex-wrap items-center gap-2">
+                <h3 class="text-sm sm:text-base font-bold text-white">
+                  Barra di Caricamento Unico — Bollette PDF, Foto Contatori &amp; Fogli Excel
+                </h3>
+                <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                  🤖 Agente IA Locale Gratuito Attivo (Zero API Key)
+                </span>
+              </div>
+              <p class="text-xs text-slate-400 mt-0.5">
+                Trascina qui PDF, foto dei contatori o Excel: l'Agente OCR + Visione Locale legge e abbina automaticamente i valori senza bisogno di API Key.
+              </p>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-2.5">
+            <label class="cursor-pointer px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-100 border border-slate-600 text-xs sm:text-sm font-bold transition-all">
+              <span>➕ Seleziona File (PDF / Foto / Excel)</span>
+              <input
+                type="file"
+                multiple
+                accept=".pdf,.jpg,.jpeg,.png,.webp,.xlsx,.xls"
+                (change)="onFileInputChange($event)"
+                class="hidden" />
+            </label>
+          </div>
+        </div>
+
+        <!-- Coda di Revisione File (#staged-files-list) -->
+        @if (fileProcessor.stagedFilesQueue().length > 0) {
+          <div class="mt-5 pt-4 border-t border-slate-800 space-y-4">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <span class="text-xs font-bold uppercase tracking-wider text-indigo-300">
+                File in coda di revisione ({{ fileProcessor.stagedFilesQueue().length }})
+              </span>
+              <div class="flex items-center gap-2">
+                <button
+                  type="button"
+                  (click)="clearAllStagedFiles()"
+                  [disabled]="fileProcessor.isProcessing()"
+                  class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-all">
+                  🗑️ Svuota tutti
+                </button>
+                <button
+                  type="button"
+                  (click)="startStagedFilesProcessing()"
+                  [disabled]="fileProcessor.isProcessing()"
+                  class="px-4 py-2 rounded-xl text-xs sm:text-sm font-extrabold bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/30 transition-all flex items-center gap-2">
+                  <span>🚀 Avvia Lettura e Calcolo</span>
+                  <span class="px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-200 text-xs">
+                    {{ fileProcessor.stagedFilesQueue().length }}
+                  </span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Barra di Avanzamento -->
+            @if (fileProcessor.isProcessing()) {
+              <div class="space-y-1.5">
+                <div class="flex justify-between text-xs text-indigo-300 font-semibold">
+                  <span>{{ fileProcessor.currentStatusLabel() }}</span>
+                  <span>{{ fileProcessor.progressPercent() }}%</span>
+                </div>
+                <div class="w-full h-2.5 bg-slate-950 rounded-full overflow-hidden border border-slate-800">
+                  <div
+                    class="h-full bg-gradient-to-r from-indigo-500 to-emerald-500 transition-all duration-300"
+                    [style.width.%]="fileProcessor.progressPercent()"></div>
+                </div>
+              </div>
+            }
+
+            <!-- Griglia Cards File in Coda -->
+            <div id="staged-files-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              @for (item of fileProcessor.stagedFilesQueue(); track item.stageId) {
+                <div class="relative bg-slate-950 border border-slate-800 rounded-xl p-3 flex items-start gap-3">
+                  @if (item.previewUrl) {
+                    <img
+                      [src]="item.previewUrl"
+                      [alt]="item.name"
+                      class="w-12 h-12 rounded-lg object-cover border border-slate-700 shrink-0" />
+                  } @else {
+                    <div class="text-2xl select-none">{{ item.icon }}</div>
+                  }
+                  <div class="min-w-0 flex-1 pr-6 space-y-1">
+                    <p class="text-xs font-bold text-slate-200 truncate" [title]="item.name">{{ item.name }}</p>
+                    <p class="text-[11px] text-slate-400">{{ item.sizeKb }}</p>
+                    @if (item.fileKind === 'image') {
+                      <select
+                        [ngModel]="item.forcedTarget"
+                        (ngModelChange)="fileProcessor.setStagedFileTarget(item.stageId, $event)"
+                        [disabled]="fileProcessor.isProcessing()"
+                        class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-[11px] font-semibold text-indigo-200 focus:outline-none">
+                        <option value="AUTO">🤖 Riconoscimento Automatico IA</option>
+                        <option value="LUCE_GEN">💡 Contatore Luce Generale (Areti)</option>
+                        <option value="LUCE_SUB">💡 Sotto-Contatore Luce (ORBIS)</option>
+                        <option value="GAS_GEN">🔥 Contatore Gas Generale (Themis)</option>
+                        <option value="GAS_SUB">🔥 Sotto-Contatore Gas (MG4 AL)</option>
+                        <option value="ACQUA_GEN">💧 Contatore Acqua Generale (ACEA)</option>
+                        <option value="ACQUA_SUB">💧 Sotto-Contatore Acqua (12-370035)</option>
+                        <option value="BOLLETTA_LUCE">📄 Foto Bolletta Luce (€)</option>
+                        <option value="BOLLETTA_GAS">📄 Foto Bolletta Gas (€)</option>
+                        <option value="BOLLETTA_ACQUA">📄 Foto Bolletta Acqua (€)</option>
+                      </select>
+                    }
+                    <p class="text-[11px] font-semibold"
+                       [ngClass]="{
+                         'text-amber-400': item.status === 'WAITING',
+                         'text-indigo-400': item.status === 'PROCESSING',
+                         'text-emerald-400': item.status === 'DONE',
+                         'text-rose-400': item.status === 'ERROR'
+                       }">
+                      {{ item.statusText }}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    (click)="removeStagedFile(item.stageId)"
+                    [disabled]="fileProcessor.isProcessing()"
+                    title="Rimuovi file dalla coda"
+                    class="absolute top-2.5 right-2.5 w-6 h-6 rounded-lg bg-slate-900 hover:bg-rose-950 text-slate-400 hover:text-rose-300 border border-slate-800 flex items-center justify-center text-xs font-bold transition-all">
+                    ✕
+                  </button>
+                </div>
+              }
+            </div>
+          </div>
+        }
+
+        <!-- Riepilogo Ultima Lettura File -->
+        @if (fileProcessor.lastProcessSummary().length > 0 && fileProcessor.stagedFilesQueue().length === 0) {
+          <div class="mt-4 pt-3 border-t border-slate-800/80 flex items-start justify-between gap-4">
+            <div class="space-y-1 text-xs text-slate-300">
+              <div class="font-bold text-slate-400 uppercase tracking-wider">Esito ultima elaborazione file:</div>
+              @for (line of fileProcessor.lastProcessSummary(); track $index) {
+                <div>{{ line }}</div>
+              }
+            </div>
+            <button
+              type="button"
+              (click)="fileProcessor.lastProcessSummary.set([])"
+              class="text-xs text-slate-400 hover:text-white">
+              Chiudi ✕
+            </button>
+          </div>
+        }
+      </div>
+
+      <!-- 3. PANNELLO CRITERI DI DISTRIBUZIONE ECONOMICA DEL SINGOLO PERIODO (#criteria-drawer) -->
+      <div id="criteria-drawer" class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-lg">
+        <button
+          type="button"
+          (click)="toggleCriteriaDrawer()"
+          class="w-full px-5 py-3.5 flex items-center justify-between bg-slate-900 hover:bg-slate-800/70 transition-all text-left">
+          <div class="flex flex-wrap items-center gap-3">
+            <span class="text-sm font-bold text-indigo-300">⚙️ Modifica Criteri Mese ▼</span>
+            @if (!isNoMetersProperty()) {
+              <span class="text-xs px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700">
+                Contatori: <strong>{{ activePeriod().criteria.weightMeter }}%</strong> ·
+                Persone: <strong>{{ activePeriod().criteria.weightPeople }}%</strong>
+                ({{ activePeriod().criteria.peopleUs }} vs {{ activePeriod().criteria.peopleTenant }})
+              </span>
+            } @else {
+              <span class="text-xs px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700">
+                Modalità Senza Contatori — Quote:
+                <strong>{{ activePeriod().criteria.peopleUs }}</strong> ({{ activeProperty().labelUs }}) vs
+                <strong>{{ activePeriod().criteria.peopleTenant }}</strong> ({{ activeProperty().labelTenant }})
+              </span>
+            }
+          </div>
+          <span class="text-xs font-semibold text-slate-400">
+            {{ isCriteriaDrawerOpen() ? 'Nascondi ▲' : 'Espandi ▼' }}
+          </span>
+        </button>
+
+        @if (isCriteriaDrawerOpen()) {
+          <div class="p-5 border-t border-slate-800 space-y-5 bg-slate-950/50">
+            <!-- Preset Rapidi -->
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="text-xs font-bold uppercase tracking-wider text-slate-400 mr-1">Preset Rapidi:</span>
+              @if (!isNoMetersProperty()) {
+                <button
+                  type="button"
+                  (click)="applyCriteriaPreset('GRETA_STD')"
+                  class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/40">
+                  Standard Greta Garbo 30%/70% (2 vs 5)
+                </button>
+              }
+              <button
+                type="button"
+                (click)="applyCriteriaPreset('50_50')"
+                class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700">
+                50% / 50% (Metà ciascuno)
+              </button>
+              <button
+                type="button"
+                (click)="applyCriteriaPreset('40_60')"
+                class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700">
+                40% / 60%
+              </button>
+              <button
+                type="button"
+                (click)="applyCriteriaPreset('60_40')"
+                class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700">
+                60% / 40%
+              </button>
+              @if (!isNoMetersProperty()) {
+                <button
+                  type="button"
+                  (click)="applyCriteriaPreset('100_METERS')"
+                  class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700">
+                  100% Solo Contatori
+                </button>
+              }
+            </div>
+
+            <!-- Griglia Card Criteri -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+              
+              <!-- Card 1: Peso Contatori vs Quota Fissa (Nascosta su Marilyn Monroe) -->
+              @if (!isNoMetersProperty()) {
+                <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-3">
+                  <div class="text-xs font-bold uppercase tracking-wider text-indigo-300">
+                    1. Peso Contatori vs Quota Fissa
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    step="5"
+                    [ngModel]="activePeriod().criteria.weightMeter"
+                    (ngModelChange)="onWeightMeterChange($event)"
+                    class="w-full accent-indigo-500 cursor-pointer" />
+                  <div class="flex justify-between text-xs font-semibold">
+                    <span class="text-indigo-300">Consumo Contatori: {{ activePeriod().criteria.weightMeter }}%</span>
+                    <span class="text-emerald-300">Quota Persone: {{ activePeriod().criteria.weightPeople }}%</span>
+                  </div>
+                </div>
+              }
+
+              <!-- Card 2: Quote / Persone per Piano (Sempre visibile) -->
+              <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-3"
+                   [ngClass]="{ 'lg:col-span-3': isNoMetersProperty() }">
+                <div class="text-xs font-bold uppercase tracking-wider text-indigo-300">
+                  {{ isNoMetersProperty() ? 'Ripartizione Quote tra i Piani' : '2. Quote / Persone per Piano' }}
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                  <div>
+                    <label class="block text-xs text-slate-400 mb-1">{{ activeProperty().labelUs }} (Sotto)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="1"
+                      [(ngModel)]="activePeriod().criteria.peopleUs"
+                      (ngModelChange)="onCriteriaChange()"
+                      class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm font-bold text-white" />
+                  </div>
+                  <div>
+                    <label class="block text-xs text-slate-400 mb-1">{{ activeProperty().labelTenant }} (Sopra)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="1"
+                      [(ngModel)]="activePeriod().criteria.peopleTenant"
+                      (ngModelChange)="onCriteriaChange()"
+                      class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm font-bold text-white" />
+                  </div>
+                </div>
+              </div>
+
+              <!-- Card 3: Chi misura il Sotto-Contatore? (Nascosta su Marilyn Monroe) -->
+              @if (!isNoMetersProperty()) {
+                <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-2.5">
+                  <div class="text-xs font-bold uppercase tracking-wider text-indigo-300">
+                    3. Chi misura il Sotto-Contatore?
+                  </div>
+                  <!-- Luce -->
+                  <div class="flex items-center justify-between text-xs">
+                    <span class="text-slate-300 font-medium">💡 Sotto-Cont. Luce:</span>
+                    <div class="flex gap-1">
+                      <button
+                        type="button"
+                        (click)="setSubOwner('luce', 'US')"
+                        class="px-2 py-1 rounded font-semibold"
+                        [ngClass]="activePeriod().criteria.luceSubOwner === 'US' ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-400'">
+                        Piano Sotto
+                      </button>
+                      <button
+                        type="button"
+                        (click)="setSubOwner('luce', 'TENANT')"
+                        class="px-2 py-1 rounded font-semibold"
+                        [ngClass]="activePeriod().criteria.luceSubOwner === 'TENANT' ? 'bg-emerald-600 text-white' : 'bg-slate-800 text-slate-400'">
+                        Piano Sopra
+                      </button>
+                    </div>
+                  </div>
+                  <!-- Gas -->
+                  <div class="flex items-center justify-between text-xs">
+                    <span class="text-slate-300 font-medium">🔥 Sotto-Cont. Gas:</span>
+                    <div class="flex gap-1">
+                      <button
+                        type="button"
+                        (click)="setSubOwner('gas', 'US')"
+                        class="px-2 py-1 rounded font-semibold"
+                        [ngClass]="activePeriod().criteria.gasSubOwner === 'US' ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-400'">
+                        Piano Sotto
+                      </button>
+                      <button
+                        type="button"
+                        (click)="setSubOwner('gas', 'TENANT')"
+                        class="px-2 py-1 rounded font-semibold"
+                        [ngClass]="activePeriod().criteria.gasSubOwner === 'TENANT' ? 'bg-emerald-600 text-white' : 'bg-slate-800 text-slate-400'">
+                        Piano Sopra
+                      </button>
+                    </div>
+                  </div>
+                  <!-- Acqua -->
+                  <div class="flex items-center justify-between text-xs">
+                    <span class="text-slate-300 font-medium">💧 Sotto-Cont. Acqua:</span>
+                    <div class="flex gap-1">
+                      <button
+                        type="button"
+                        (click)="setSubOwner('acqua', 'US')"
+                        class="px-2 py-1 rounded font-semibold"
+                        [ngClass]="activePeriod().criteria.acquaSubOwner === 'US' ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-400'">
+                        Piano Sotto
+                      </button>
+                      <button
+                        type="button"
+                        (click)="setSubOwner('acqua', 'TENANT')"
+                        class="px-2 py-1 rounded font-semibold"
+                        [ngClass]="activePeriod().criteria.acquaSubOwner === 'TENANT' ? 'bg-emerald-600 text-white' : 'bg-slate-800 text-slate-400'">
+                        Piano Sopra
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
+        }
+      </div>
+
+      <!-- 4. GRIGLIA DELLE 3 UTENZE (Luce, Gas, Acqua) -->
+      <div class="space-y-4">
+        
+        <!-- RIGA 1: LUCE -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-lg space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-slate-800">
+            <div class="flex items-center gap-2.5">
+              <span class="text-xl">💡</span>
+              <h3 class="text-base font-extrabold text-amber-300">Energia Elettrica (Luce — kWh)</h3>
+            </div>
+            @if (!isNoMetersProperty()) {
+              <span class="text-xs px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-800 text-slate-300">
+                Sotto-contatore misura:
+                <strong class="text-indigo-300">
+                  {{ activePeriod().criteria.luceSubOwner === 'US' ? activeProperty().labelUs : activeProperty().labelTenant }}
+                </strong>
+              </span>
+            }
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-center">
+            <!-- Importo Bolletta -->
+            <div class="lg:col-span-3 bg-slate-950 border border-slate-800 rounded-xl p-3.5">
+              <label class="block text-xs font-bold uppercase text-slate-400 mb-1.5">Importo Bolletta (€)</label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                [(ngModel)]="activePeriod().luce.bill"
+                (ngModelChange)="onUtilityInput()"
+                class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-lg font-extrabold text-white focus:outline-none focus:ring-2 focus:ring-amber-400" />
+            </div>
+
+            <!-- Contatori Luce (Nascosti su Via Marilyn Monroe 150) -->
+            @if (!isNoMetersProperty()) {
+              <!-- Contatore Generale -->
+              <div class="meter-box-col lg:col-span-3 bg-slate-950 border border-slate-800 rounded-xl p-3.5 space-y-2">
+                <div class="flex items-center justify-between">
+                  <span class="text-xs font-bold uppercase text-slate-400">Contatore Generale</span>
+                  <span class="text-xs font-extrabold px-2 py-0.5 rounded bg-amber-500/20 text-amber-300">
+                    Δ {{ activePeriodSummary().luce.deltaGen }} kWh
+                  </span>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                  <div>
+                    <label class="block text-[11px] text-slate-400">Inizio</label>
+                    <input
+                      type="number"
+                      step="1"
+                      [(ngModel)]="activePeriod().luce.genStart"
+                      (ngModelChange)="onUtilityInput()"
+                      class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-sm font-bold text-slate-200" />
+                  </div>
+                  <div>
+                    <label class="block text-[11px] text-slate-400">Fine</label>
+                    <input
+                      type="number"
+                      step="1"
+                      [(ngModel)]="activePeriod().luce.genEnd"
+                      (ngModelChange)="onUtilityInput()"
+                      class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-sm font-bold text-white" />
+                  </div>
+                </div>
+              </div>
+
+              <!-- Sotto-Contatore -->
+              <div class="meter-box-col lg:col-span-3 bg-slate-950 border border-slate-800 rounded-xl p-3.5 space-y-2">
+                <div class="flex items-center justify-between">
+                  <span class="text-xs font-bold uppercase text-slate-400">Sotto-Contatore (ORBIS)</span>
+                  <span class="text-xs font-extrabold px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300">
+                    Δ {{ activePeriodSummary().luce.deltaSub }} kWh
+                  </span>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                  <div>
+                    <label class="block text-[11px] text-slate-400">Inizio</label>
+                    <input
+                      type="number"
+                      step="1"
+                      [(ngModel)]="activePeriod().luce.subStart"
+                      (ngModelChange)="onUtilityInput()"
+                      class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-sm font-bold text-slate-200" />
+                  </div>
+                  <div>
+                    <label class="block text-[11px] text-slate-400">Fine</label>
+                    <input
+                      type="number"
+                      step="1"
+                      [(ngModel)]="activePeriod().luce.subEnd"
+                      (ngModelChange)="onUtilityInput()"
+                      class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-sm font-bold text-white" />
+                  </div>
+                </div>
+              </div>
+            }
+
+            <!-- Quote Calcolate + Rettifica Manuale -->
+            <div class="bg-slate-950 border border-slate-800 rounded-xl p-3.5 space-y-2"
+                 [ngClass]="isNoMetersProperty() ? 'lg:col-span-9' : 'lg:col-span-3'">
+              <div class="flex items-center justify-between text-xs">
+                <span class="text-indigo-300 font-semibold">{{ activeProperty().labelUs }}:</span>
+                <span class="font-extrabold text-indigo-200 text-sm">{{ formatEuro(activePeriodSummary().luce.shareUs) }} €</span>
+              </div>
+              <div class="flex items-center justify-between text-xs">
+                <span class="text-emerald-300 font-semibold">{{ activeProperty().labelTenant }}:</span>
+                <span class="font-extrabold text-emerald-300 text-base">{{ formatEuro(activePeriodSummary().luce.shareTenant) }} €</span>
+              </div>
+              <div class="pt-1.5 border-t border-slate-800 flex items-center gap-1.5">
+                <span class="text-[11px] text-slate-400 whitespace-nowrap">Rettifica quota Sopra (€):</span>
+                <input
+                  type="number"
+                  step="0.01"
+                  placeholder="Auto"
+                  [ngModel]="activePeriod().luce.manualTenant"
+                  (ngModelChange)="onManualOverrideInput('luce', $event)"
+                  class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs font-bold text-amber-300" />
+                @if (activePeriodSummary().luce.isManual) {
+                  <button
+                    type="button"
+                    (click)="clearManualOverride('luce')"
+                    title="Torna al calcolo automatico"
+                    class="px-2 py-1 rounded bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-xs font-bold">
+                    ↺
+                  </button>
+                }
+              </div>
+            </div>
+          </div>
+
+          @if (activePeriodSummary().luce.warnings.length > 0) {
+            <div class="flex flex-wrap items-center justify-between gap-2 pt-1">
+              <div class="flex flex-wrap gap-2">
+                @for (w of activePeriodSummary().luce.warnings; track $index) {
+                  <span class="text-[11px] px-2.5 py-1 rounded-lg bg-amber-950/80 border border-amber-500/40 text-amber-300">
+                    ⚠️ {{ w }}
+                  </span>
+                }
+              </div>
+              @if (previousPeriod()) {
+                <div class="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    (click)="alignCurrentStartWithPreviousEnd('luce')"
+                    class="text-[11px] px-2.5 py-1 rounded-lg bg-indigo-950 hover:bg-indigo-900 text-indigo-200 border border-indigo-500/40 font-semibold">
+                    🔧 Allinea Inizio a Fine {{ previousPeriod()?.name }}
+                  </button>
+                  <button
+                    type="button"
+                    (click)="alignPreviousEndWithCurrentStart('luce')"
+                    class="text-[11px] px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600 font-semibold">
+                    🔧 Correggi Fine {{ previousPeriod()?.name }}
+                  </button>
+                </div>
+              }
+            </div>
+          }
+        </div>
+
+        <!-- RIGA 2: GAS -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-lg space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-slate-800">
+            <div class="flex items-center gap-2.5">
+              <span class="text-xl">🔥</span>
+              <h3 class="text-base font-extrabold text-orange-300">Gas Metano (m³ / Smc)</h3>
+            </div>
+            @if (!isNoMetersProperty()) {
+              <span class="text-xs px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-800 text-slate-300">
+                Sotto-contatore misura:
+                <strong class="text-indigo-300">
+                  {{ activePeriod().criteria.gasSubOwner === 'US' ? activeProperty().labelUs : activeProperty().labelTenant }}
+                </strong>
+              </span>
+            }
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-center">
+            <!-- Importo Bolletta -->
+            <div class="lg:col-span-3 bg-slate-950 border border-slate-800 rounded-xl p-3.5">
+              <label class="block text-xs font-bold uppercase text-slate-400 mb-1.5">Importo Bolletta (€)</label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                [(ngModel)]="activePeriod().gas.bill"
+                (ngModelChange)="onUtilityInput()"
+                class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-lg font-extrabold text-white focus:outline-none focus:ring-2 focus:ring-orange-400" />
+            </div>
+
+            <!-- Contatori Gas (Nascosti su Via Marilyn Monroe 150) -->
+            @if (!isNoMetersProperty()) {
+              <!-- Contatore Generale -->
+              <div class="meter-box-col lg:col-span-3 bg-slate-950 border border-slate-800 rounded-xl p-3.5 space-y-2">
+                <div class="flex items-center justify-between">
+                  <span class="text-xs font-bold uppercase text-slate-400">Contatore Generale (Themis)</span>
+                  <span class="text-xs font-extrabold px-2 py-0.5 rounded bg-orange-500/20 text-orange-300">
+                    Δ {{ activePeriodSummary().gas.deltaGen }} m³
+                  </span>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                  <div>
+                    <label class="block text-[11px] text-slate-400">Inizio</label>
+                    <input
+                      type="number"
+                      step="1"
+                      [(ngModel)]="activePeriod().gas.genStart"
+                      (ngModelChange)="onUtilityInput()"
+                      class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-sm font-bold text-slate-200" />
+                  </div>
+                  <div>
+                    <label class="block text-[11px] text-slate-400">Fine</label>
+                    <input
+                      type="number"
+                      step="1"
+                      [(ngModel)]="activePeriod().gas.genEnd"
+                      (ngModelChange)="onUtilityInput()"
+                      class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-sm font-bold text-white" />
+                  </div>
+                </div>
+              </div>
+
+              <!-- Sotto-Contatore -->
+              <div class="meter-box-col lg:col-span-3 bg-slate-950 border border-slate-800 rounded-xl p-3.5 space-y-2">
+                <div class="flex items-center justify-between">
+                  <span class="text-xs font-bold uppercase text-slate-400">Sotto-Contatore (MG4 AL)</span>
+                  <span class="text-xs font-extrabold px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300">
+                    Δ {{ activePeriodSummary().gas.deltaSub }} m³
+                  </span>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                  <div>
+                    <label class="block text-[11px] text-slate-400">Inizio</label>
+                    <input
+                      type="number"
+                      step="1"
+                      [(ngModel)]="activePeriod().gas.subStart"
+                      (ngModelChange)="onUtilityInput()"
+                      class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-sm font-bold text-slate-200" />
+                  </div>
+                  <div>
+                    <label class="block text-[11px] text-slate-400">Fine</label>
+                    <input
+                      type="number"
+                      step="1"
+                      [(ngModel)]="activePeriod().gas.subEnd"
+                      (ngModelChange)="onUtilityInput()"
+                      class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-sm font-bold text-white" />
+                  </div>
+                </div>
+              </div>
+            }
+
+            <!-- Quote Calcolate + Rettifica Manuale -->
+            <div class="bg-slate-950 border border-slate-800 rounded-xl p-3.5 space-y-2"
+                 [ngClass]="isNoMetersProperty() ? 'lg:col-span-9' : 'lg:col-span-3'">
+              <div class="flex items-center justify-between text-xs">
+                <span class="text-indigo-300 font-semibold">{{ activeProperty().labelUs }}:</span>
+                <span class="font-extrabold text-indigo-200 text-sm">{{ formatEuro(activePeriodSummary().gas.shareUs) }} €</span>
+              </div>
+              <div class="flex items-center justify-between text-xs">
+                <span class="text-emerald-300 font-semibold">{{ activeProperty().labelTenant }}:</span>
+                <span class="font-extrabold text-emerald-300 text-base">{{ formatEuro(activePeriodSummary().gas.shareTenant) }} €</span>
+              </div>
+              <div class="pt-1.5 border-t border-slate-800 flex items-center gap-1.5">
+                <span class="text-[11px] text-slate-400 whitespace-nowrap">Rettifica quota Sopra (€):</span>
+                <input
+                  type="number"
+                  step="0.01"
+                  placeholder="Auto"
+                  [ngModel]="activePeriod().gas.manualTenant"
+                  (ngModelChange)="onManualOverrideInput('gas', $event)"
+                  class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs font-bold text-amber-300" />
+                @if (activePeriodSummary().gas.isManual) {
+                  <button
+                    type="button"
+                    (click)="clearManualOverride('gas')"
+                    title="Torna al calcolo automatico"
+                    class="px-2 py-1 rounded bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-xs font-bold">
+                    ↺
+                  </button>
+                }
+              </div>
+            </div>
+          </div>
+
+          @if (activePeriodSummary().gas.warnings.length > 0) {
+            <div class="flex flex-wrap items-center justify-between gap-2 pt-1">
+              <div class="flex flex-wrap gap-2">
+                @for (w of activePeriodSummary().gas.warnings; track $index) {
+                  <span class="text-[11px] px-2.5 py-1 rounded-lg bg-amber-950/80 border border-amber-500/40 text-amber-300">
+                    ⚠️ {{ w }}
+                  </span>
+                }
+              </div>
+              @if (previousPeriod()) {
+                <div class="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    (click)="alignCurrentStartWithPreviousEnd('gas')"
+                    class="text-[11px] px-2.5 py-1 rounded-lg bg-indigo-950 hover:bg-indigo-900 text-indigo-200 border border-indigo-500/40 font-semibold">
+                    🔧 Allinea Inizio a Fine {{ previousPeriod()?.name }}
+                  </button>
+                  <button
+                    type="button"
+                    (click)="alignPreviousEndWithCurrentStart('gas')"
+                    class="text-[11px] px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600 font-semibold">
+                    🔧 Correggi Fine {{ previousPeriod()?.name }}
+                  </button>
+                </div>
+              }
+            </div>
+          }
+        </div>
+
+        <!-- RIGA 3: ACQUA -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-lg space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-slate-800">
+            <div class="flex items-center gap-2.5">
+              <span class="text-xl">💧</span>
+              <h3 class="text-base font-extrabold text-cyan-300">Servizio Idrico (Acqua ACEA — m³)</h3>
+            </div>
+            @if (!isNoMetersProperty()) {
+              <span class="text-xs px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-800 text-slate-300">
+                Sotto-contatore (12-370035) misura:
+                <strong class="text-emerald-300">
+                  {{ activePeriod().criteria.acquaSubOwner === 'TENANT' ? activeProperty().labelTenant : activeProperty().labelUs }}
+                </strong>
+              </span>
+            }
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-center">
+            <!-- Importo Bolletta -->
+            <div class="lg:col-span-3 bg-slate-950 border border-slate-800 rounded-xl p-3.5">
+              <label class="block text-xs font-bold uppercase text-slate-400 mb-1.5">Importo Bolletta (€)</label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                [(ngModel)]="activePeriod().acqua.bill"
+                (ngModelChange)="onUtilityInput()"
+                class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-lg font-extrabold text-white focus:outline-none focus:ring-2 focus:ring-cyan-400" />
+            </div>
+
+            <!-- Contatori Acqua (Nascosti su Via Marilyn Monroe 150) -->
+            @if (!isNoMetersProperty()) {
+              <!-- Contatore Generale -->
+              <div class="meter-box-col lg:col-span-3 bg-slate-950 border border-slate-800 rounded-xl p-3.5 space-y-2">
+                <div class="flex items-center justify-between">
+                  <span class="text-xs font-bold uppercase text-slate-400">Contatore Generale (ACEA)</span>
+                  <span class="text-xs font-extrabold px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300">
+                    Δ {{ activePeriodSummary().acqua.deltaGen }} m³
+                  </span>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                  <div>
+                    <label class="block text-[11px] text-slate-400">Inizio</label>
+                    <input
+                      type="number"
+                      step="1"
+                      [(ngModel)]="activePeriod().acqua.genStart"
+                      (ngModelChange)="onUtilityInput()"
+                      class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-sm font-bold text-slate-200" />
+                  </div>
+                  <div>
+                    <label class="block text-[11px] text-slate-400">Fine</label>
+                    <input
+                      type="number"
+                      step="1"
+                      [(ngModel)]="activePeriod().acqua.genEnd"
+                      (ngModelChange)="onUtilityInput()"
+                      class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-sm font-bold text-white" />
+                  </div>
+                </div>
+              </div>
+
+              <!-- Sotto-Contatore -->
+              <div class="meter-box-col lg:col-span-3 bg-slate-950 border border-slate-800 rounded-xl p-3.5 space-y-2">
+                <div class="flex items-center justify-between">
+                  <span class="text-xs font-bold uppercase text-slate-400">Sotto-Contatore (12-370035)</span>
+                  <span class="text-xs font-extrabold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300">
+                    Δ {{ activePeriodSummary().acqua.deltaSub }} m³
+                  </span>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                  <div>
+                    <label class="block text-[11px] text-slate-400">Inizio</label>
+                    <input
+                      type="number"
+                      step="1"
+                      [(ngModel)]="activePeriod().acqua.subStart"
+                      (ngModelChange)="onUtilityInput()"
+                      class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-sm font-bold text-slate-200" />
+                  </div>
+                  <div>
+                    <label class="block text-[11px] text-slate-400">Fine</label>
+                    <input
+                      type="number"
+                      step="1"
+                      [(ngModel)]="activePeriod().acqua.subEnd"
+                      (ngModelChange)="onUtilityInput()"
+                      class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-sm font-bold text-white" />
+                  </div>
+                </div>
+              </div>
+            }
+
+            <!-- Quote Calcolate + Rettifica Manuale -->
+            <div class="bg-slate-950 border border-slate-800 rounded-xl p-3.5 space-y-2"
+                 [ngClass]="isNoMetersProperty() ? 'lg:col-span-9' : 'lg:col-span-3'">
+              <div class="flex items-center justify-between text-xs">
+                <span class="text-indigo-300 font-semibold">{{ activeProperty().labelUs }}:</span>
+                <span class="font-extrabold text-indigo-200 text-sm">{{ formatEuro(activePeriodSummary().acqua.shareUs) }} €</span>
+              </div>
+              <div class="flex items-center justify-between text-xs">
+                <span class="text-emerald-300 font-semibold">{{ activeProperty().labelTenant }}:</span>
+                <span class="font-extrabold text-emerald-300 text-base">{{ formatEuro(activePeriodSummary().acqua.shareTenant) }} €</span>
+              </div>
+              <div class="pt-1.5 border-t border-slate-800 flex items-center gap-1.5">
+                <span class="text-[11px] text-slate-400 whitespace-nowrap">Rettifica quota Sopra (€):</span>
+                <input
+                  type="number"
+                  step="0.01"
+                  placeholder="Auto"
+                  [ngModel]="activePeriod().acqua.manualTenant"
+                  (ngModelChange)="onManualOverrideInput('acqua', $event)"
+                  class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs font-bold text-amber-300" />
+                @if (activePeriodSummary().acqua.isManual) {
+                  <button
+                    type="button"
+                    (click)="clearManualOverride('acqua')"
+                    title="Torna al calcolo automatico"
+                    class="px-2 py-1 rounded bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-xs font-bold">
+                    ↺
+                  </button>
+                }
+              </div>
+            </div>
+          </div>
+
+          @if (activePeriodSummary().acqua.warnings.length > 0) {
+            <div class="flex flex-wrap items-center justify-between gap-2 pt-1">
+              <div class="flex flex-wrap gap-2">
+                @for (w of activePeriodSummary().acqua.warnings; track $index) {
+                  <span class="text-[11px] px-2.5 py-1 rounded-lg bg-amber-950/80 border border-amber-500/40 text-amber-300">
+                    ⚠️ {{ w }}
+                  </span>
+                }
+              </div>
+              @if (previousPeriod()) {
+                <div class="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    (click)="alignCurrentStartWithPreviousEnd('acqua')"
+                    class="text-[11px] px-2.5 py-1 rounded-lg bg-indigo-950 hover:bg-indigo-900 text-indigo-200 border border-indigo-500/40 font-semibold">
+                    🔧 Allinea Inizio a Fine {{ previousPeriod()?.name }}
+                  </button>
+                  <button
+                    type="button"
+                    (click)="alignPreviousEndWithCurrentStart('acqua')"
+                    class="text-[11px] px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600 font-semibold">
+                    🔧 Correggi Fine {{ previousPeriod()?.name }}
+                  </button>
+                </div>
+              }
+            </div>
+          }
+        </div>
+      </div>
+
+    </section>
+  }
+
+  <!-- =========================================================================
+       7.3 VISTA 2 — STORICO & BONIFICI (#tab-storico)
+       ========================================================================= -->
+  @if (activeTab() === 'storico') {
+    <section id="tab-storico" class="space-y-6">
+
+      <!-- 1. 3 KPI Compatti in alto -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4">
+          <div class="text-xs font-bold uppercase tracking-wider text-slate-400">Totale Bollette Periodi</div>
+          <div class="mt-1.5 text-2xl font-extrabold text-white">
+            {{ formatEuro(historicalTotals().totalBills) }} €
+          </div>
+          <div class="mt-1 text-xs text-slate-400">
+            Su {{ activeProperty().periods.length }} periodi registrati in {{ activeProperty().name }}
+          </div>
+        </div>
+
+        <div class="bg-indigo-950/40 border border-indigo-500/40 rounded-2xl p-4">
+          <div class="text-xs font-bold uppercase tracking-wider text-indigo-300">
+            Totale Quota Sotto ({{ activeProperty().labelUs }})
+          </div>
+          <div class="mt-1.5 text-2xl font-extrabold text-indigo-200">
+            {{ formatEuro(historicalTotals().totalUs) }} €
+          </div>
+          <div class="mt-1 text-xs text-indigo-300/70">Quota cumulativa Piano Inferiore</div>
+        </div>
+
+        <div class="bg-emerald-950/40 border border-emerald-500/40 rounded-2xl p-4">
+          <div class="text-xs font-bold uppercase tracking-wider text-emerald-300">
+            Totale Quota Sopra ({{ activeProperty().labelTenant }})
+          </div>
+          <div class="mt-1.5 text-2xl font-extrabold text-emerald-300">
+            {{ formatEuro(historicalTotals().totalTenant) }} €
+          </div>
+          <div class="mt-1 text-xs text-emerald-200 flex flex-wrap items-center gap-3">
+            <span>✅ Saldati con Bonifico: <strong>{{ formatEuro(historicalTotals().totalPaidByTransfer) }} €</strong></span>
+            @if (historicalTotals().totalPending > 0) {
+              <span class="text-amber-300">⏳ Da incassare: <strong>{{ formatEuro(historicalTotals().totalPending) }} €</strong></span>
+            }
+            @if (historicalTotals().totalRoundingBalance !== 0) {
+              <span class="px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-200 border border-indigo-500/30 text-[11px]">
+                Conguaglio arrotondamenti:
+                <strong>{{ historicalTotals().totalRoundingBalance > 0 ? '+' : '' }}{{ formatEuro(historicalTotals().totalRoundingBalance) }} €</strong>
+              </span>
+            }
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. Tabella 1 — 📋 Riepilogo Periodi e Quote -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+        <div class="px-5 py-4 border-b border-slate-800 flex items-center justify-between">
+          <h2 class="text-base font-extrabold text-white">📋 Riepilogo Periodi e Quote — {{ activeProperty().name }}</h2>
+          <span class="text-xs text-slate-400">Clicca sullo stato per commutare Pagato / Da saldare</span>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse text-xs sm:text-sm">
+            <thead>
+              <tr class="bg-slate-950/80 text-slate-400 uppercase text-[11px] font-bold border-b border-slate-800">
+                <th class="py-3 px-4">Periodo</th>
+                <th class="py-3 px-3 text-right">💡 Luce</th>
+                <th class="py-3 px-3 text-right">🔥 Gas</th>
+                <th class="py-3 px-3 text-right">💧 Acqua</th>
+                <th class="py-3 px-4 text-right text-indigo-300">Quota Sotto</th>
+                <th class="py-3 px-4 text-right text-emerald-300">Quota Sopra</th>
+                <th class="py-3 px-4 text-center">Stato</th>
+                <th class="py-3 px-4 text-right">Azioni</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-800/80">
+              @for (row of historicalRows(); track row.period.id) {
+                <tr class="hover:bg-slate-800/40 transition-colors">
+                  <td class="py-3.5 px-4">
+                    <div class="font-bold text-white">{{ row.period.name }}</div>
+                    <div class="text-[11px] text-slate-400">{{ row.period.dateStart }} → {{ row.period.dateEnd }}</div>
+                  </td>
+                  <td class="py-3.5 px-3 text-right font-medium text-slate-300">
+                    {{ formatEuro(row.summary.luce.billAmount) }} €
+                  </td>
+                  <td class="py-3.5 px-3 text-right font-medium text-slate-300">
+                    {{ formatEuro(row.summary.gas.billAmount) }} €
+                  </td>
+                  <td class="py-3.5 px-3 text-right font-medium text-slate-300">
+                    {{ formatEuro(row.summary.acqua.billAmount) }} €
+                  </td>
+                  <td class="py-3.5 px-4 text-right font-bold text-indigo-300">
+                    {{ formatEuro(row.summary.totalUs) }} €
+                  </td>
+                  <td class="py-3.5 px-4 text-right font-extrabold text-emerald-300">
+                    {{ formatEuro(row.summary.totalTenant) }} €
+                  </td>
+                  <td class="py-3.5 px-4 text-center">
+                    <button
+                      type="button"
+                      (click)="togglePeriodStatus(row.period)"
+                      class="px-2.5 py-1 rounded-full text-xs font-bold border transition-all"
+                      [ngClass]="row.period.status === 'PAGATO'
+                        ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                        : 'bg-amber-500/20 text-amber-300 border-amber-500/40'">
+                      {{ row.period.status === 'PAGATO' ? '✅ Pagato' : '⏳ Da saldare' }}
+                    </button>
+                  </td>
+                  <td class="py-3.5 px-4 text-right">
+                    <div class="flex items-center justify-end gap-1.5">
+                      <button
+                        type="button"
+                        (click)="openPeriodInCalcolo(row.period.id)"
+                        class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700">
+                        ✏️ Apri
+                      </button>
+                      <button
+                        type="button"
+                        (click)="openPeriodInPdf(row.period.id)"
+                        class="px-2.5 py-1 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 text-xs font-semibold border border-indigo-500/30">
+                        📄 PDF
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 3. Tabella 2 — 🏦 Date Bonifici Bollette (Sincronizzato con i Periodi) -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+        <div class="px-5 py-4 border-b border-slate-800 flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h2 class="text-base font-extrabold text-white">
+              🏦 Date Bonifici Bollette (Sincronizzato con i Periodi)
+            </h2>
+            <p class="text-xs text-slate-400 mt-0.5">
+              Inserendo una data (o cliccando "Oggi") il periodo passa automaticamente a Pagato; svuotando la data (o cliccando ✕) torna a Da saldare.
+            </p>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse text-xs sm:text-sm">
+            <thead>
+              <tr class="bg-slate-950/80 text-slate-400 uppercase text-[11px] font-bold border-b border-slate-800">
+                <th class="py-3 px-4">Periodo di Riferimento</th>
+                <th class="py-3 px-4 text-right">Importo Dovuto Inquilini</th>
+                <th class="py-3 px-4">Data Bonifico Effettuato</th>
+                <th class="py-3 px-4 text-center">Stato Riconciliazione</th>
+                <th class="py-3 px-4">Note Periodo</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-800/80">
+              @for (row of historicalRows(); track row.period.id) {
+                <tr class="hover:bg-slate-800/40 transition-colors">
+                  <td class="py-3.5 px-4 font-bold text-white">
+                    {{ row.period.name }}
+                  </td>
+                  <td class="py-3.5 px-4 text-right">
+                    <div class="font-extrabold text-emerald-300">{{ formatEuro(row.summary.totalTenant) }} €</div>
+                    @if (row.matchedTransfer && row.roundingDiff !== 0) {
+                      <div class="text-[11px] text-indigo-300">
+                        Bonificato: {{ formatEuro(row.actualPaidBills) }} € ({{ row.roundingDiff > 0 ? '+' : '' }}{{ formatEuro(row.roundingDiff) }} €)
+                      </div>
+                    }
+                  </td>
+                  <td class="py-3.5 px-4">
+                    <div class="flex items-center gap-1.5">
+                      <input
+                        type="text"
+                        [ngModel]="row.period.transferDate"
+                        (ngModelChange)="updatePeriodTransferDate(row.period, $event)"
+                        placeholder="gg/mm/aaaa"
+                        class="w-36 bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs font-bold text-white focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                      <button
+                        type="button"
+                        (click)="setTransferDateToday(row.period)"
+                        class="px-2.5 py-1.5 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/40 text-xs font-bold transition-all">
+                        Oggi
+                      </button>
+                      <button
+                        type="button"
+                        (click)="clearTransferDate(row.period)"
+                        title="Cancella data bonifico e riporta a Da saldare"
+                        class="px-2 py-1.5 rounded-lg bg-rose-950/80 hover:bg-rose-900 text-rose-300 border border-rose-700/50 text-xs font-bold transition-all">
+                        ✕
+                      </button>
+                    </div>
+                  </td>
+                  <td class="py-3.5 px-4 text-center">
+                    <span
+                      class="px-2.5 py-1 rounded-full text-xs font-bold border inline-block"
+                      [ngClass]="row.period.status === 'PAGATO'
+                        ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                        : 'bg-amber-500/20 text-amber-300 border-amber-500/40'">
+                      {{ row.period.status === 'PAGATO' ? '✅ Bonifico Ricevuto' : '⏳ In attesa' }}
+                    </span>
+                  </td>
+                  <td class="py-3.5 px-4 text-xs text-slate-400">
+                    <div>{{ row.period.notes || '—' }}</div>
+                    @if (row.matchedTransfer?.notes) {
+                      <div class="text-[11px] text-emerald-300/80 mt-0.5">🏦 {{ row.matchedTransfer?.notes }}</div>
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </section>
+  }
+
+  <!-- =========================================================================
+       7.4 VISTA 3 — FOGLIO PDF INQUILINI (#tab-pdf e #printable-sheet)
+       ========================================================================= -->
+  @if (activeTab() === 'pdf') {
+    <section id="tab-pdf" class="space-y-6">
+
+      <!-- Barra Opzioni PDF (.no-print) -->
+      <div class="no-print bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-xl flex flex-wrap items-center justify-between gap-4">
+        <div class="flex flex-wrap items-center gap-4">
+          <!-- Selettore Periodo Rapido -->
+          <div class="flex items-center gap-2">
+            <label class="text-xs font-bold uppercase text-slate-400">Periodo:</label>
+            <select
+              [ngModel]="activePeriod().id"
+              (ngModelChange)="onSelectPeriod($event)"
+              class="bg-slate-950 border border-slate-700 text-white text-xs sm:text-sm font-semibold rounded-xl px-3 py-1.5">
+              @for (p of activeProperty().periods; track p.id) {
+                <option [value]="p.id">{{ p.name }}</option>
+              }
+            </select>
+          </div>
+
+          <!-- Selettore Lingua -->
+          <div class="flex items-center gap-2">
+            <label class="text-xs font-bold uppercase text-slate-400">Lingua Prospetto:</label>
+            <div class="flex bg-slate-950 p-1 rounded-xl border border-slate-800">
+              <button
+                type="button"
+                (click)="pdfLanguage.set('BILINGUAL')"
+                class="px-2.5 py-1 rounded-lg text-xs font-bold transition-all"
+                [ngClass]="pdfLanguage() === 'BILINGUAL' ? 'bg-indigo-600 text-white' : 'text-slate-400'">
+                🇮🇹/🇬🇧 Bilingue
+              </button>
+              <button
+                type="button"
+                (click)="pdfLanguage.set('IT')"
+                class="px-2.5 py-1 rounded-lg text-xs font-bold transition-all"
+                [ngClass]="pdfLanguage() === 'IT' ? 'bg-indigo-600 text-white' : 'text-slate-400'">
+                🇮🇹 Solo ITA
+              </button>
+              <button
+                type="button"
+                (click)="pdfLanguage.set('EN')"
+                class="px-2.5 py-1 rounded-lg text-xs font-bold transition-all"
+                [ngClass]="pdfLanguage() === 'EN' ? 'bg-indigo-600 text-white' : 'text-slate-400'">
+                🇬🇧 Solo ENG
+              </button>
+            </div>
+          </div>
+
+          <!-- Checkbox Includi Canone di Locazione -->
+          <div class="flex items-center gap-2 bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-800">
+            <input
+              type="checkbox"
+              id="chk-rent"
+              [ngModel]="pdfIncludeRent()"
+              (ngModelChange)="pdfIncludeRent.set($event)"
+              class="rounded accent-indigo-500 cursor-pointer" />
+            <label for="chk-rent" class="text-xs font-semibold text-slate-200 cursor-pointer">
+              Includi Canone Affitto (€):
+            </label>
+            <input
+              type="number"
+              step="10"
+              [ngModel]="effectiveRentAmount()"
+              (ngModelChange)="pdfCustomRent.set($event)"
+              class="w-24 bg-slate-900 border border-slate-700 rounded px-2 py-0.5 text-xs font-bold text-emerald-300" />
+          </div>
+
+          <!-- Checkbox Mostra/Nascondi Colonna Quota Piano Sotto -->
+          <div class="flex items-center gap-2 bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-800">
+            <input
+              type="checkbox"
+              id="chk-us-col"
+              [ngModel]="pdfShowUsColumn()"
+              (ngModelChange)="pdfShowUsColumn.set($event)"
+              class="rounded accent-indigo-500 cursor-pointer" />
+            <label for="chk-us-col" class="text-xs font-semibold text-slate-200 cursor-pointer">
+              Mostra colonna {{ activeProperty().labelUs }}
+            </label>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          (click)="printPdfSheet()"
+          class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs sm:text-sm font-extrabold shadow-lg shadow-emerald-600/30">
+          🖨️ Stampa / Salva PDF A4
+        </button>
+      </div>
+
+      <!-- FOGLIO STAMPABILE A4 (#printable-sheet) — BLINDATURA ASSOLUTA DELLA FORMULA -->
+      <div
+        id="printable-sheet"
+        class="bg-white text-slate-900 rounded-2xl shadow-2xl border border-slate-200 p-8 sm:p-10 max-w-4xl mx-auto space-y-6">
+        
+        <!-- Intestazione Prospetto -->
+        <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-4 pb-6 border-b-2 border-slate-900">
+          <div>
+            <div class="text-xs font-bold uppercase tracking-widest text-slate-500">
+              @if (pdfLanguage() === 'BILINGUAL') {
+                PROSPETTO CONTABILE UTENZE DOMESTICHE / UTILITY BILLS STATEMENT
+              } @else if (pdfLanguage() === 'IT') {
+                PROSPETTO CONTABILE RIPARTIZIONE UTENZE DOMESTICHE
+              } @else {
+                RESIDENTIAL UTILITY BILLS STATEMENT
+              }
+            </div>
+            <h1 class="text-2xl font-extrabold text-slate-900 mt-1">
+              {{ activeProperty().address }}
+            </h1>
+            <p class="text-sm text-slate-600 mt-1">
+              @if (pdfLanguage() === 'BILINGUAL') {
+                Inquilini / Tenants: <strong>{{ activeProperty().labelTenant }}</strong>
+              } @else if (pdfLanguage() === 'IT') {
+                Inquilini: <strong>{{ activeProperty().labelTenant }}</strong>
+              } @else {
+                Tenants: <strong>{{ activeProperty().labelTenant }}</strong>
+              }
+            </p>
+          </div>
+
+          <div class="sm:text-right bg-slate-100 px-4 py-3 rounded-xl border border-slate-300">
+            <div class="text-xs font-bold uppercase text-slate-500">
+              @if (pdfLanguage() === 'BILINGUAL') {
+                Periodo di Riferimento / Billing Period
+              } @else if (pdfLanguage() === 'IT') {
+                Periodo di Riferimento
+              } @else {
+                Billing Period
+              }
+            </div>
+            <div class="text-lg font-extrabold text-slate-900">{{ activePeriod().name }}</div>
+            <div class="text-xs text-slate-600">
+              {{ activePeriod().dateStart }} → {{ activePeriod().dateEnd }}
+            </div>
+          </div>
+        </div>
+
+        <!-- Tabella Contabile Ufficiale (Senza alcuna menzione di percentuali 30%/70% o frazioni 2/7 e 5/7) -->
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse text-sm">
+            <thead>
+              <tr class="border-b-2 border-slate-900 bg-slate-100 text-slate-800 text-xs uppercase font-bold">
+                <th class="py-3 px-3">
+                  @if (pdfLanguage() === 'BILINGUAL') {
+                    Utenza / Utility
+                  } @else if (pdfLanguage() === 'IT') {
+                    Utenza
+                  } @else {
+                    Utility
+                  }
+                </th>
+
+                @if (pdfShowMeterColumns()) {
+                  <th class="py-3 px-3">
+                    @if (pdfLanguage() === 'BILINGUAL') {
+                      Contatore Generale / Main Meter
+                    } @else if (pdfLanguage() === 'IT') {
+                      Lettura Contatore Generale
+                    } @else {
+                      Main Meter Reading
+                    }
+                  </th>
+                  <th class="py-3 px-3">
+                    @if (pdfLanguage() === 'BILINGUAL') {
+                      Contatore Divisionale / Sub-Meter
+                    } @else if (pdfLanguage() === 'IT') {
+                      Lettura Contatore Divisionale
+                    } @else {
+                      Sub-Meter Reading
+                    }
+                  </th>
+                }
+
+                <th class="py-3 px-3 text-right">
+                  @if (pdfLanguage() === 'BILINGUAL') {
+                    Totale Fattura / Total Bill
+                  } @else if (pdfLanguage() === 'IT') {
+                    Totale Fattura
+                  } @else {
+                    Total Bill
+                  }
+                </th>
+
+                @if (pdfShowUsColumn()) {
+                  <th class="py-3 px-3 text-right">
+                    @if (pdfLanguage() === 'BILINGUAL') {
+                      Quota {{ activeProperty().labelUs }}
+                    } @else if (pdfLanguage() === 'IT') {
+                      Quota {{ activeProperty().labelUs }}
+                    } @else {
+                      {{ activeProperty().labelUs }} Share
+                    }
+                  </th>
+                }
+
+                <th class="py-3 px-3 text-right bg-emerald-50 text-emerald-950">
+                  @if (pdfLanguage() === 'BILINGUAL') {
+                    Importo Dovuto / Amount Due ({{ activeProperty().labelTenant }})
+                  } @else if (pdfLanguage() === 'IT') {
+                    Importo Dovuto ({{ activeProperty().labelTenant }})
+                  } @else {
+                    Amount Due ({{ activeProperty().labelTenant }})
+                  }
+                </th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-300">
+              <!-- Riga Luce -->
+              <tr>
+                <td class="py-3.5 px-3 font-bold text-slate-900">
+                  @if (pdfLanguage() === 'BILINGUAL') {
+                    💡 Energia Elettrica / Electricity
+                  } @else if (pdfLanguage() === 'IT') {
+                    💡 Energia Elettrica (Luce)
+                  } @else {
+                    💡 Electricity
+                  }
+                </td>
+                @if (pdfShowMeterColumns()) {
+                  <td class="py-3.5 px-3 text-xs text-slate-700">
+                    <div>{{ activePeriod().luce.genStart }} → {{ activePeriod().luce.genEnd }} kWh</div>
+                    <div class="font-semibold text-slate-900">
+                      Δ {{ activePeriodSummary().luce.deltaGen }} kWh
+                    </div>
+                  </td>
+                  <td class="py-3.5 px-3 text-xs text-slate-700">
+                    <div>{{ activePeriod().luce.subStart }} → {{ activePeriod().luce.subEnd }} kWh</div>
+                    <div class="font-semibold text-slate-900">
+                      Δ {{ activePeriodSummary().luce.deltaSub }} kWh
+                    </div>
+                  </td>
+                }
+                <td class="py-3.5 px-3 text-right font-semibold text-slate-800">
+                  {{ formatEuro(activePeriodSummary().luce.billAmount) }} €
+                </td>
+                @if (pdfShowUsColumn()) {
+                  <td class="py-3.5 px-3 text-right font-medium text-slate-700">
+                    {{ formatEuro(activePeriodSummary().luce.shareUs) }} €
+                  </td>
+                }
+                <td class="py-3.5 px-3 text-right font-extrabold text-emerald-900 bg-emerald-50/60">
+                  {{ formatEuro(activePeriodSummary().luce.shareTenant) }} €
+                </td>
+              </tr>
+
+              <!-- Riga Gas -->
+              <tr>
+                <td class="py-3.5 px-3 font-bold text-slate-900">
+                  @if (pdfLanguage() === 'BILINGUAL') {
+                    🔥 Gas Metano / Natural Gas
+                  } @else if (pdfLanguage() === 'IT') {
+                    🔥 Gas Metano
+                  } @else {
+                    🔥 Natural Gas
+                  }
+                </td>
+                @if (pdfShowMeterColumns()) {
+                  <td class="py-3.5 px-3 text-xs text-slate-700">
+                    <div>{{ activePeriod().gas.genStart }} → {{ activePeriod().gas.genEnd }} m³</div>
+                    <div class="font-semibold text-slate-900">
+                      Δ {{ activePeriodSummary().gas.deltaGen }} m³
+                    </div>
+                  </td>
+                  <td class="py-3.5 px-3 text-xs text-slate-700">
+                    <div>{{ activePeriod().gas.subStart }} → {{ activePeriod().gas.subEnd }} m³</div>
+                    <div class="font-semibold text-slate-900">
+                      Δ {{ activePeriodSummary().gas.deltaSub }} m³
+                    </div>
+                  </td>
+                }
+                <td class="py-3.5 px-3 text-right font-semibold text-slate-800">
+                  {{ formatEuro(activePeriodSummary().gas.billAmount) }} €
+                </td>
+                @if (pdfShowUsColumn()) {
+                  <td class="py-3.5 px-3 text-right font-medium text-slate-700">
+                    {{ formatEuro(activePeriodSummary().gas.shareUs) }} €
+                  </td>
+                }
+                <td class="py-3.5 px-3 text-right font-extrabold text-emerald-900 bg-emerald-50/60">
+                  {{ formatEuro(activePeriodSummary().gas.shareTenant) }} €
+                </td>
+              </tr>
+
+              <!-- Riga Acqua -->
+              <tr>
+                <td class="py-3.5 px-3 font-bold text-slate-900">
+                  @if (pdfLanguage() === 'BILINGUAL') {
+                    💧 Servizio Idrico ACEA / Water Supply
+                  } @else if (pdfLanguage() === 'IT') {
+                    💧 Servizio Idrico (Acqua ACEA)
+                  } @else {
+                    💧 Water Supply (ACEA)
+                  }
+                </td>
+                @if (pdfShowMeterColumns()) {
+                  <td class="py-3.5 px-3 text-xs text-slate-700">
+                    <div>{{ activePeriod().acqua.genStart }} → {{ activePeriod().acqua.genEnd }} m³</div>
+                    <div class="font-semibold text-slate-900">
+                      Δ {{ activePeriodSummary().acqua.deltaGen }} m³
+                    </div>
+                  </td>
+                  <td class="py-3.5 px-3 text-xs text-slate-700">
+                    <div>{{ activePeriod().acqua.subStart }} → {{ activePeriod().acqua.subEnd }} m³</div>
+                    <div class="font-semibold text-slate-900">
+                      Δ {{ activePeriodSummary().acqua.deltaSub }} m³
+                    </div>
+                  </td>
+                }
+                <td class="py-3.5 px-3 text-right font-semibold text-slate-800">
+                  {{ formatEuro(activePeriodSummary().acqua.billAmount) }} €
+                </td>
+                @if (pdfShowUsColumn()) {
+                  <td class="py-3.5 px-3 text-right font-medium text-slate-700">
+                    {{ formatEuro(activePeriodSummary().acqua.shareUs) }} €
+                  </td>
+                }
+                <td class="py-3.5 px-3 text-right font-extrabold text-emerald-900 bg-emerald-50/60">
+                  {{ formatEuro(activePeriodSummary().acqua.shareTenant) }} €
+                </td>
+              </tr>
+            </tbody>
+
+            <!-- Totale Utenze (+ eventuale Canone di Locazione) -->
+            <tfoot>
+              <tr class="border-t-2 border-slate-900 bg-slate-100 font-bold text-slate-900">
+                <td class="py-3.5 px-3" [attr.colspan]="pdfShowMeterColumns() ? 3 : 1">
+                  @if (pdfLanguage() === 'BILINGUAL') {
+                    TOTALE UTENZE PERIODO / TOTAL UTILITIES
+                  } @else if (pdfLanguage() === 'IT') {
+                    TOTALE UTENZE PERIODO
+                  } @else {
+                    TOTAL UTILITIES FOR THE PERIOD
+                  }
+                </td>
+                <td class="py-3.5 px-3 text-right">
+                  {{ formatEuro(activePeriodSummary().totalBill) }} €
+                </td>
+                @if (pdfShowUsColumn()) {
+                  <td class="py-3.5 px-3 text-right">
+                    {{ formatEuro(activePeriodSummary().totalUs) }} €
+                  </td>
+                }
+                <td class="py-3.5 px-3 text-right text-base font-extrabold text-emerald-950 bg-emerald-100">
+                  {{ formatEuro(activePeriodSummary().totalTenant) }} €
+                </td>
+              </tr>
+
+              @if (pdfIncludeRent()) {
+                <tr class="border-t border-slate-300 font-semibold text-slate-800">
+                  <td class="py-3 px-3" [attr.colspan]="(pdfShowMeterColumns() ? 3 : 1) + 1 + (pdfShowUsColumn() ? 1 : 0)">
+                    @if (pdfLanguage() === 'BILINGUAL') {
+                      🏠 Canone di Locazione Mensile / Monthly Rent
+                    } @else if (pdfLanguage() === 'IT') {
+                      🏠 Canone di Locazione
+                    } @else {
+                      🏠 Monthly Rent
+                    }
+                  </td>
+                  <td class="py-3 px-3 text-right font-bold text-slate-900">
+                    {{ formatEuro(effectiveRentAmount()) }} €
+                  </td>
+                </tr>
+
+                <tr class="border-t-2 border-slate-900 bg-emerald-900 text-white font-extrabold text-base">
+                  <td class="py-4 px-3" [attr.colspan]="(pdfShowMeterColumns() ? 3 : 1) + 1 + (pdfShowUsColumn() ? 1 : 0)">
+                    @if (pdfLanguage() === 'BILINGUAL') {
+                      TOTALE COMPLESSIVO DA BONIFICARE (AFFITTO + UTENZE) / TOTAL AMOUNT DUE (RENT + UTILITIES)
+                    } @else if (pdfLanguage() === 'IT') {
+                      TOTALE COMPLESSIVO DA BONIFICARE (AFFITTO + UTENZE)
+                    } @else {
+                      GRAND TOTAL DUE BY BANK TRANSFER (RENT + UTILITIES)
+                    }
+                  </td>
+                  <td class="py-4 px-3 text-right text-lg">
+                    {{ formatEuro(pdfGrandTotalTenant()) }} €
+                  </td>
+                </tr>
+              }
+            </tfoot>
+          </table>
+        </div>
+
+        <!-- Riepilogo Finale e Note -->
+        <div class="pt-4 border-t border-slate-300 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-xs text-slate-600">
+          <div>
+            @if (activePeriod().notes) {
+              <p>
+                <strong>
+                  @if (pdfLanguage() === 'EN') { Notes: } @else { Note: }
+                </strong>
+                {{ activePeriod().notes }}
+              </p>
+            }
+            <p class="mt-1">
+              @if (pdfLanguage() === 'BILINGUAL') {
+                Stato pagamento / Payment status:
+                <strong>{{ activePeriod().status === 'PAGATO' ? 'SALDATO / PAID' : 'DA SALDARE / DUE' }}</strong>
+                @if (activePeriod().transferDate) {
+                  ({{ activePeriod().transferDate }})
+                }
+              } @else if (pdfLanguage() === 'IT') {
+                Stato pagamento: <strong>{{ activePeriod().status === 'PAGATO' ? 'SALDATO' : 'DA SALDARE' }}</strong>
+                @if (activePeriod().transferDate) {
+                  ({{ activePeriod().transferDate }})
+                }
+              } @else {
+                Payment status: <strong>{{ activePeriod().status === 'PAGATO' ? 'PAID' : 'PAYMENT DUE' }}</strong>
+                @if (activePeriod().transferDate) {
+                  ({{ activePeriod().transferDate }})
+                }
+              }
+            </p>
+          </div>
+
+          <div class="text-right font-bold text-slate-800">
+            @if (pdfLanguage() === 'BILINGUAL') {
+              Totale da versare / Total Due:
+            } @else if (pdfLanguage() === 'IT') {
+              Totale da versare:
+            } @else {
+              Total Due:
+            }
+            <span class="text-lg font-extrabold text-emerald-800 ml-1">
+              {{ formatEuro(pdfGrandTotalTenant()) }} €
+            </span>
+          </div>
+        </div>
+      </div>
+
+    </section>
+  }
+
+</main>
+
+<!-- =========================================================================
+     MODALE NUOVO PERIODO (Copia Automatica Letture Finali -> Iniziali)
+     ========================================================================= -->
+@if (isNewPeriodModalOpen()) {
+  <div class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 no-print">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h3 class="text-base font-extrabold text-white">➕ Crea Nuovo Periodo — {{ activeProperty().name }}</h3>
+        <button type="button" (click)="closeNewPeriodModal()" class="text-slate-400 hover:text-white">✕</button>
+      </div>
+
+      <div class="space-y-3">
+        <div>
+          <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Nome Periodo (es. Settembre - Ottobre 2026)</label>
+          <input
+            type="text"
+            [(ngModel)]="newPeriodName"
+            class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-sm font-bold text-white" />
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Data Inizio (Dal)</label>
+            <input
+              type="text"
+              [(ngModel)]="newPeriodDateStart"
+              placeholder="gg/mm/aaaa"
+              class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs font-semibold text-white" />
+          </div>
+          <div>
+            <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Data Fine (Al)</label>
+            <input
+              type="text"
+              [(ngModel)]="newPeriodDateEnd"
+              placeholder="gg/mm/aaaa"
+              class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs font-semibold text-white" />
+          </div>
+        </div>
+
+        @if (!isNoMetersProperty()) {
+          <label class="flex items-start gap-2.5 p-3 rounded-xl bg-indigo-950/40 border border-indigo-500/30 cursor-pointer">
+            <input
+              type="checkbox"
+              [(ngModel)]="newPeriodCopyReadings"
+              class="mt-0.5 rounded accent-indigo-500" />
+            <span class="text-xs text-indigo-200 leading-relaxed">
+              <strong>Copia automaticamente le Letture Finali</strong> dell'ultimo periodo registrato nelle Letture Iniziali del nuovo periodo (Luce, Gas e Acqua).
+            </span>
+          </label>
+        }
+      </div>
+
+      <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-800">
+        <button
+          type="button"
+          (click)="closeNewPeriodModal()"
+          class="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300">
+          Annulla
+        </button>
+        <button
+          type="button"
+          (click)="confirmCreateNewPeriod()"
+          class="px-4 py-2 rounded-xl text-xs font-extrabold bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-600/30">
+          ➕ Crea Periodo
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- =========================================================================
+     MODALE GESTIONE BACKUP & ARCHIVIO LOCALE
+     ========================================================================= -->
+@if (isSettingsModalOpen()) {
+  <div class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 no-print">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-5">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h3 class="text-base font-extrabold text-white">🗂️ Gestione Backup &amp; Archivio Locale</h3>
+        <button type="button" (click)="closeSettingsModal()" class="text-slate-400 hover:text-white">✕</button>
+      </div>
+
+      <div class="space-y-3">
+        <div class="text-xs font-bold uppercase text-slate-400">Archivio Locale ({{ 'villa_multi_utilities_v5' }})</div>
+        <p class="text-xs text-slate-300 leading-relaxed">
+          Puoi esportare l'intero archivio storico in un file JSON di sicurezza o ricaricarlo in qualsiasi momento.
+        </p>
+        <div class="flex flex-wrap gap-2 pt-1">
+          <button
+            type="button"
+            (click)="downloadJsonBackup()"
+            class="px-3.5 py-2 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700">
+            ⬇️ Esporta Backup JSON
+          </button>
+
+          <label class="cursor-pointer px-3.5 py-2 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700">
+            <span>⬆️ Importa Backup JSON</span>
+            <input type="file" accept=".json" (change)="onImportBackupFile($event)" class="hidden" />
+          </label>
+
+          <button
+            type="button"
+            (click)="resetFactoryDefaults()"
+            class="px-3.5 py-2 rounded-xl text-xs font-bold bg-rose-950/70 hover:bg-rose-900 text-rose-200 border border-rose-800/50">
+            🔄 Ripristina Dati Predefiniti
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+}
