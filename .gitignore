@@ -42,3 +42,8 @@ __screenshots__/
 # System files
 .DS_Store
 Thumbs.db
+
+# Local PII & Private Seed Config (excluded from version control)
+/public/local-seed.config.json
+*.local.json
+/specifica_tecnica_completa_gestionale_bollette.md

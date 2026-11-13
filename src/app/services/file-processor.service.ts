@@ -205,21 +205,23 @@ export class FileProcessorService {
     const visualAnalysis = await this.analyzeAndEnhanceImageOnCanvas(file);
     let ocrText = '';
 
-    if (window.Tesseract) {
-      try {
+    try {
+      const tesseractMod: any = window.Tesseract || (await import('tesseract.js'));
+      const recognizeFn = tesseractMod?.recognize || tesseractMod?.default?.recognize;
+      if (recognizeFn) {
         this.currentStatusLabel.set(`🤖 Agente OCR Locale in lettura su ${file.name}...`);
         // Passaggio 1 sull'immagine migliorata ad alto contrasto
-        const resEnhanced = await window.Tesseract.recognize(visualAnalysis.enhancedDataUrl, 'eng+ita');
+        const resEnhanced = await recognizeFn(visualAnalysis.enhancedDataUrl, 'eng+ita');
         ocrText += ' ' + (resEnhanced?.data?.text || '');
 
         // Passaggio 2 sull'immagine originale se ci sono poche cifre
         if ((ocrText.match(/\d/g) || []).length < 3) {
-          const resOrig = await window.Tesseract.recognize(file, 'eng+ita');
+          const resOrig = await recognizeFn(file, 'eng+ita');
           ocrText += ' ' + (resOrig?.data?.text || '');
         }
-      } catch (ocrErr) {
-        console.warn('Errore parziale Tesseract OCR:', ocrErr);
       }
+    } catch (ocrErr) {
+      console.warn('Errore parziale Tesseract OCR:', ocrErr);
     }
 
     return this.interpretOcrAndVisuals(file.name, ocrText, visualAnalysis, forcedTarget);
@@ -602,9 +604,12 @@ export class FileProcessorService {
   }
 
   private async processPdfFile(file: File): Promise<string> {
-    const pdfjsLib = window.pdfjsLib;
+    const pdfjsLib: any = window.pdfjsLib || (await import('pdfjs-dist'));
     if (!pdfjsLib) {
       throw new Error('Libreria PDF.js non caricata.');
+    }
+    if (pdfjsLib.GlobalWorkerOptions && !pdfjsLib.GlobalWorkerOptions.workerSrc) {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
     }
 
     const arrayBuffer = await file.arrayBuffer();
@@ -652,7 +657,8 @@ export class FileProcessorService {
   }
 
   private async processExcelFile(file: File): Promise<string> {
-    const XLSX = window.XLSX;
+    const xlsxMod: any = window.XLSX || (await import('xlsx'));
+    const XLSX = xlsxMod?.read ? xlsxMod : xlsxMod?.default;
     if (!XLSX) {
       throw new Error('Libreria SheetJS (XLSX) non caricata.');
     }
@@ -660,10 +666,10 @@ export class FileProcessorService {
     const arrayBuffer = await file.arrayBuffer();
     const workbook = XLSX.read(arrayBuffer, { type: 'array' });
 
-    const ignoredSheets = ['riepilogo pagamenti', 'data bonifici channon'];
-    const validSheets = workbook.SheetNames.filter(
-      (name: string) => !ignoredSheets.includes(name.trim().toLowerCase())
-    );
+    const validSheets = workbook.SheetNames.filter((name: string) => {
+      const lower = name.trim().toLowerCase();
+      return !lower.startsWith('riepilogo pagamenti') && !lower.startsWith('data bonifici');
+    });
 
     if (!validSheets.length) {
       throw new Error('Nessun foglio mensile valido trovato nel file Excel.');

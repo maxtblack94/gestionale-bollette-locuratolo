@@ -17,8 +17,14 @@
     "@angular/forms": "^21.2.0",
     "@angular/platform-browser": "^21.2.0",
     "@angular/router": "^21.2.0",
+    "@tailwindcss/postcss": "^4.3.5",
+    "pdfjs-dist": "^3.11.174",
+    "postcss": "^8.5.32",
     "rxjs": "~7.8.0",
-    "tslib": "^2.3.0"
+    "tailwindcss": "^4.3.5",
+    "tesseract.js": "^5.1.1",
+    "tslib": "^2.3.0",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@angular/build": "^21.2.17",

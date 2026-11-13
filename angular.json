@@ -27,6 +27,12 @@
             ],
             "styles": [
               "src/styles.css"
+            ],
+            "allowedCommonJsDependencies": [
+              "tesseract.js",
+              "pdfjs-dist",
+              "regenerator-runtime/runtime",
+              "is-electron"
             ]
           },
           "configurations": {

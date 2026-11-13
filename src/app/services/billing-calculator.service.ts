@@ -118,7 +118,7 @@ export class BillingCalculatorService {
       };
     }
 
-    // Caso 2 — Modalità Senza Contatori (w_M <= 0.0001, es. Via Marilyn Monroe 150)
+    // Caso 2 — Modalità Senza Contatori (w_M <= 0.0001, solo quote)
     if (wM <= 0.0001) {
       const shareTenant = this.round2(B * (pTenant / pTot));
       const shareUs = this.round2(B - shareTenant);
@@ -135,7 +135,7 @@ export class BillingCalculatorService {
       };
     }
 
-    // Caso 3 — Formula Mista Contatori + Persone (es. Via Greta Garbo 13 con arrotondamento a 1 decimale)
+    // Caso 3 — Formula Mista Contatori + Persone (con arrotondamento intermedio a 1 decimale)
     // Con clamping [0, B] per impedire quote superiori al totale bolletta o resti negativi su importi minimi
     if (subOwner === 'US') {
       const rawUs = B * wM * ratio + B * wP * (pUs / pTot);

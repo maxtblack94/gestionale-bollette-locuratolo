@@ -1,4 +1,4 @@
-import { Injectable, signal, computed } from '@angular/core';
+import { Injectable, signal, computed, inject } from '@angular/core';
 import {
   AppState,
   BillingPeriod,
@@ -7,21 +7,33 @@ import {
   PropertyId,
   STORAGE_KEY,
 } from '../models/billing.models';
+import { StorageSecurityService } from './storage-security.service';
 
 @Injectable({
   providedIn: 'root',
 })
 export class StateService {
+  private readonly security = inject(StorageSecurityService);
+
   readonly appState = signal<AppState>(createInitialDefaultState());
   private savedBaselineString = '';
   readonly hasUnsavedChanges = signal<boolean>(false);
   readonly lastSavedTimestamp = signal<string | null>(null);
   readonly toastMessage = signal<{ text: string; type: 'success' | 'info' | 'warning' | 'error' } | null>(null);
 
+  readonly propertyList = computed<PropertyConfig[]>(
+    () => {
+      const state = this.appState();
+      return Object.values(state.properties || {});
+    },
+    { equal: () => false }
+  );
+
   readonly activeProperty = computed<PropertyConfig>(
     () => {
       const state = this.appState();
-      return state.properties[state.activePropertyId] || state.properties.greta_garbo;
+      const firstProp = Object.values(state.properties)[0];
+      return state.properties[state.activePropertyId] || firstProp;
     },
     { equal: () => false }
   );
@@ -58,31 +70,30 @@ export class StateService {
     );
   }
 
-  private cloneState(state: AppState): AppState {
-    return JSON.parse(JSON.stringify(state));
-  }
-
   initFromStorage(): void {
     try {
+      // Rimuove eventuali vecchi dati pre-salvati da chiavi legacy
+      localStorage.removeItem('villa_multi_utilities_v5');
+
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
-        const parsed = JSON.parse(raw) as AppState;
-        if (parsed && parsed.properties && parsed.properties.greta_garbo && parsed.properties.marilyn_monroe) {
-          this.appState.set(parsed);
-          this.savedBaselineString = this.getComparableStateString(parsed);
+        const validated = this.security.decodeStateFromLocalStorage(raw);
+        if (validated) {
+          this.appState.set(validated);
+          this.savedBaselineString = this.getComparableStateString(validated);
           this.hasUnsavedChanges.set(false);
           return;
         }
       }
     } catch (e) {
-      console.warn('Errore lettura localStorage, uso DEFAULT_STATE:', e);
+      console.warn('Errore lettura localStorage, uso stato predefinito:', e);
     }
 
     const initial = createInitialDefaultState();
     this.appState.set(initial);
     this.savedBaselineString = this.getComparableStateString(initial);
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(initial));
+      localStorage.setItem(STORAGE_KEY, this.security.encodeStateForLocalStorage(initial));
     } catch {
       // ignore storage errors
     }
@@ -102,12 +113,13 @@ export class StateService {
   }
 
   /**
-   * Salvataggio esplicito su localStorage e aggiornamento della baseline.
+   * Salvataggio esplicito su localStorage (protetto da offuscamento + checksum) e aggiornamento della baseline.
    */
   manualSaveChanges(silent = false): void {
     const current = this.appState();
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(current));
+      const encoded = this.security.encodeStateForLocalStorage(current);
+      localStorage.setItem(STORAGE_KEY, encoded);
     } catch (e) {
       console.error('Errore salvataggio localStorage:', e);
     }
@@ -119,7 +131,7 @@ export class StateService {
       now.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
     );
     if (!silent) {
-      this.showToast('Modifiche salvate correttamente nella memoria locale.', 'success');
+      this.showToast('Modifiche salvate e protette nella memoria locale.', 'success');
     }
   }
 
@@ -130,13 +142,14 @@ export class StateService {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
-        const parsed = JSON.parse(raw) as AppState;
-        if (parsed && parsed.properties) {
-          // Mantieni immobile attivo corrente per comodità visiva ma ripristina tutte le properties
+        const validated = this.security.decodeStateFromLocalStorage(raw);
+        if (validated) {
           const activeProp = this.appState().activePropertyId;
-          parsed.activePropertyId = activeProp;
-          this.appState.set(parsed);
-          this.savedBaselineString = this.getComparableStateString(parsed);
+          if (validated.properties[activeProp]) {
+            validated.activePropertyId = activeProp;
+          }
+          this.appState.set(validated);
+          this.savedBaselineString = this.getComparableStateString(validated);
           this.hasUnsavedChanges.set(false);
           this.showToast('Modifiche annullate: ripristinato ultimo stato salvato.', 'info');
           return;
@@ -154,20 +167,19 @@ export class StateService {
   }
 
   /**
-   * Ripristino completo ai dati di fabbrica (DEFAULT_STATE) e salvataggio.
+   * Ripristino completo ai dati di fabbrica e salvataggio.
    */
   resetFactoryDefaults(): void {
     const initial = createInitialDefaultState();
     this.appState.set(initial);
     this.manualSaveChanges(true);
-    this.showToast('Dati storici predefiniti ripristinati con successo.', 'info');
+    this.showToast('Gestionale riportato allo stato iniziale vuoto.', 'info');
   }
 
   setActiveProperty(propId: PropertyId): void {
     const state = this.appState();
     if (state.activePropertyId === propId) return;
     state.activePropertyId = propId;
-    // Il cambio di scheda o immobile attivo non altera savedBaselineString
     this.appState.set({ ...state });
   }
 
@@ -176,8 +188,6 @@ export class StateService {
     const prop = state.properties[state.activePropertyId];
     if (!prop || prop.activePeriodId === periodId) return;
     prop.activePeriodId = periodId;
-    // Nota: activePeriodId è dentro properties, ma per non sporcare il pulsante Salva
-    // al semplice cambio di mese visualizzato, aggiorniamo allineando la baseline se non c'erano modifiche pendenti
     const hadChanges = this.hasUnsavedChanges();
     this.appState.set({ ...state });
     if (!hadChanges) {
@@ -188,23 +198,80 @@ export class StateService {
     }
   }
 
+  createProperty(newProp: PropertyConfig): void {
+    const state = this.appState();
+    state.properties[newProp.id] = newProp;
+    state.activePropertyId = newProp.id;
+    this.saveState();
+    this.showToast(`Nuovo immobile "${newProp.name}" creato e selezionato!`, 'success');
+  }
+
+  updatePropertyConfig(
+    propId: PropertyId,
+    updates: Partial<PropertyConfig>,
+    applyToActivePeriod = false
+  ): void {
+    const state = this.appState();
+    const target = state.properties[propId];
+    if (!target) return;
+
+    Object.assign(target, updates);
+    if (updates.defaultCriteria) {
+      target.defaultCriteria = { ...target.defaultCriteria, ...updates.defaultCriteria };
+    }
+
+    if (applyToActivePeriod) {
+      const currentPeriod =
+        target.periods.find((p) => p.id === target.activePeriodId) || target.periods[0];
+      if (currentPeriod) {
+        currentPeriod.criteria = JSON.parse(JSON.stringify(target.defaultCriteria));
+      }
+    }
+
+    this.saveState();
+    this.showToast(`Configurazione di "${target.name}" aggiornata.`, 'success');
+  }
+
+  deleteProperty(propId: PropertyId): boolean {
+    const state = this.appState();
+    const keys = Object.keys(state.properties);
+    if (keys.length <= 1) {
+      this.showToast('Deve rimanere almeno un immobile nel gestionale.', 'warning');
+      return false;
+    }
+
+    const removedName = state.properties[propId]?.name || propId;
+    delete state.properties[propId];
+    const remainingKeys = Object.keys(state.properties);
+    if (state.activePropertyId === propId) {
+      state.activePropertyId = remainingKeys[0];
+    }
+
+    this.saveState();
+    this.showToast(`Immobile "${removedName}" eliminato.`, 'info');
+    return true;
+  }
+
   exportBackupJson(): string {
     return JSON.stringify(this.appState(), null, 2);
   }
 
+  /**
+   * PUNTO 5: Validazione rigorosa dello schema durante l'importazione di un backup JSON.
+   */
   importBackupJson(jsonStr: string): boolean {
-    try {
-      const parsed = JSON.parse(jsonStr) as AppState;
-      if (parsed && parsed.properties && parsed.properties.greta_garbo && parsed.properties.marilyn_monroe) {
-        this.appState.set(parsed);
-        this.manualSaveChanges(true);
-        this.showToast('Backup JSON importato e salvato con successo!', 'success');
-        return true;
-      }
-    } catch (e) {
-      console.error('JSON non valido:', e);
+    const validated = this.security.decodeStateFromLocalStorage(jsonStr);
+    if (validated) {
+      this.appState.set(validated);
+      this.manualSaveChanges(true);
+      this.showToast('Backup JSON validato, importato e salvato con successo!', 'success');
+      return true;
     }
-    this.showToast('File JSON di backup non valido.', 'error');
+
+    this.showToast(
+      'File JSON di backup rifiutato: struttura o tipi dei dati non validi.',
+      'error'
+    );
     return false;
   }
 

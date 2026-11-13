@@ -3,10 +3,15 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import {
   ActiveTab,
+  BillingFrequency,
   BillingPeriod,
+  FloorPosition,
   PdfLanguage,
   PeriodCalculationSummary,
+  PropertyConfig,
   PropertyId,
+  StagedFileItem,
+  StagedTargetCategory,
   SubOwnerType,
   UtilityKey,
 } from './models/billing.models';
@@ -41,16 +46,80 @@ export class App {
   // Modale Backup Dati
   readonly isSettingsModalOpen = signal<boolean>(false);
 
+  // Modale Gestione Dinamica Immobile, Indirizzo & Inquilini (Crea / Modifica)
+  readonly isPropertyModalOpen = signal<boolean>(false);
+  readonly propertyModalMode = signal<'CREATE' | 'EDIT'>('EDIT');
+  readonly propFormIcon = signal<string>('🏠');
+  readonly propFormName = signal<string>('');
+  readonly propFormAddress = signal<string>('');
+  readonly propFormLabelUs = signal<string>('');
+  readonly propFormLabelTenant = signal<string>('');
+  readonly propFormOwnerFloor = signal<FloorPosition>('SOTTO');
+  readonly propFormDefaultRent = signal<number>(1200);
+  readonly propFormBillingFrequency = signal<BillingFrequency>('BIMONTHLY');
+  readonly propFormNoMetersMode = signal<boolean>(false);
+  readonly propFormWeightMeter = signal<number>(30);
+  readonly propFormPeopleUs = signal<number>(2);
+  readonly propFormPeopleTenant = signal<number>(5);
+  readonly propFormLuceSubOwner = signal<SubOwnerType>('US');
+  readonly propFormGasSubOwner = signal<SubOwnerType>('US');
+  readonly propFormAcquaSubOwner = signal<SubOwnerType>('TENANT');
+  readonly propFormApplyToActivePeriod = signal<boolean>(true);
+  readonly availableIcons = ['🏠', '🏡', '🏢', '🏘️', '🏖️', '🏛️'];
+
   // Opzioni Vista 3 — Foglio PDF Inquilini
   readonly pdfLanguage = signal<PdfLanguage>('BILINGUAL');
   readonly pdfIncludeRent = signal<boolean>(false);
   readonly pdfCustomRent = signal<number | null>(null);
   readonly pdfShowUsColumn = signal<boolean>(true);
 
-  // Computed su immobile e periodo attivo
+  // Computed su lista immobili, immobile attivo e periodo attivo
+  readonly propertyList = this.stateService.propertyList;
   readonly activeProperty = this.stateService.activeProperty;
   readonly activePeriod = this.stateService.activePeriod;
   readonly previousPeriod = this.stateService.previousPeriod;
+
+  // Nominativi effettivi (permettono di personalizzare gli inquilini anche mese per mese in caso di subentro!)
+  readonly effectiveLabelUs = computed<string>(() => {
+    const p = this.activePeriod();
+    if (p?.customLabelUs && p.customLabelUs.trim().length > 0) {
+      return p.customLabelUs.trim();
+    }
+    return this.activeProperty().labelUs;
+  });
+
+  readonly effectiveLabelTenant = computed<string>(() => {
+    const p = this.activePeriod();
+    if (p?.customLabelTenant && p.customLabelTenant.trim().length > 0) {
+      return p.customLabelTenant.trim();
+    }
+    return this.activeProperty().labelTenant;
+  });
+
+  // Etichette dinamiche dei piani (Sotto / Sopra) in base alla configurazione dell'immobile
+  readonly ownerFloorLabel = computed<string>(() =>
+    this.activeProperty().ownerFloor === 'SOPRA' ? 'Piano Sopra' : 'Piano Sotto'
+  );
+
+  readonly tenantFloorLabel = computed<string>(() =>
+    this.activeProperty().ownerFloor === 'SOPRA' ? 'Piano Sotto' : 'Piano Sopra'
+  );
+
+  readonly ownerFloorShort = computed<string>(() =>
+    this.activeProperty().ownerFloor === 'SOPRA' ? 'Sopra' : 'Sotto'
+  );
+
+  readonly tenantFloorShort = computed<string>(() =>
+    this.activeProperty().ownerFloor === 'SOPRA' ? 'Sotto' : 'Sopra'
+  );
+
+  readonly propModalOwnerFloorLabel = computed<string>(() =>
+    this.propFormOwnerFloor() === 'SOPRA' ? 'Piano Sopra' : 'Piano Sotto'
+  );
+
+  readonly propModalTenantFloorLabel = computed<string>(() =>
+    this.propFormOwnerFloor() === 'SOPRA' ? 'Piano Sotto' : 'Piano Sopra'
+  );
 
   readonly isNoMetersProperty = computed<boolean>(() => {
     const prop = this.activeProperty();
@@ -138,11 +207,15 @@ export class App {
     };
   });
 
-  // Importo Canone per il PDF
+  // Importo Canone per il PDF (personalizzabile per singolo periodo o per immobile)
   readonly effectiveRentAmount = computed<number>(() => {
-    const custom = this.pdfCustomRent();
-    if (custom !== null && !Number.isNaN(Number(custom))) {
-      return Number(custom);
+    const customPdf = this.pdfCustomRent();
+    if (customPdf !== null && !Number.isNaN(Number(customPdf))) {
+      return Number(customPdf);
+    }
+    const periodRent = this.activePeriod()?.customRent;
+    if (periodRent !== null && periodRent !== undefined && !Number.isNaN(Number(periodRent))) {
+      return Number(periodRent);
     }
     return this.activeProperty().defaultRent;
   });
@@ -300,19 +373,14 @@ export class App {
     this.stateService.saveState();
   }
 
-  applyCriteriaPreset(preset: 'GRETA_STD' | '50_50' | '40_60' | '60_40' | '100_METERS'): void {
+  applyCriteriaPreset(preset: 'PROP_DEFAULT' | '50_50' | '40_60' | '60_40' | '100_METERS'): void {
     const p = this.activePeriod();
+    const prop = this.activeProperty();
     const noMeters = this.isNoMetersProperty();
 
     switch (preset) {
-      case 'GRETA_STD':
-        p.criteria.weightMeter = 30;
-        p.criteria.weightPeople = 70;
-        p.criteria.peopleUs = 2;
-        p.criteria.peopleTenant = 5;
-        p.criteria.luceSubOwner = 'US';
-        p.criteria.gasSubOwner = 'US';
-        p.criteria.acquaSubOwner = 'TENANT';
+      case 'PROP_DEFAULT':
+        p.criteria = JSON.parse(JSON.stringify(prop.defaultCriteria));
         break;
       case '50_50':
         if (noMeters) {
@@ -346,6 +414,232 @@ export class App {
     this.stateService.saveState();
   }
 
+  // Gestione Dinamica Immobili, Indirizzi e Inquilini
+  openCreatePropertyModal(): void {
+    this.propertyModalMode.set('CREATE');
+    this.propFormIcon.set('🏢');
+    this.propFormName.set('');
+    this.propFormAddress.set('');
+    this.propFormOwnerFloor.set('SOTTO');
+    this.propFormLabelUs.set('Proprietà');
+    this.propFormLabelTenant.set('Inquilini');
+    this.propFormDefaultRent.set(1200);
+    this.propFormBillingFrequency.set('BIMONTHLY');
+    this.propFormNoMetersMode.set(false);
+    this.propFormWeightMeter.set(30);
+    this.propFormPeopleUs.set(2);
+    this.propFormPeopleTenant.set(2);
+    this.propFormLuceSubOwner.set('US');
+    this.propFormGasSubOwner.set('US');
+    this.propFormAcquaSubOwner.set('TENANT');
+    this.propFormApplyToActivePeriod.set(true);
+    this.isPropertyModalOpen.set(true);
+  }
+
+  openEditPropertyModal(): void {
+    const prop = this.activeProperty();
+    this.propertyModalMode.set('EDIT');
+    this.propFormIcon.set(prop.icon || '🏠');
+    this.propFormName.set(prop.name);
+    this.propFormAddress.set(prop.address);
+    this.propFormOwnerFloor.set(prop.ownerFloor || 'SOTTO');
+    this.propFormLabelUs.set(prop.labelUs);
+    this.propFormLabelTenant.set(prop.labelTenant);
+    this.propFormDefaultRent.set(prop.defaultRent);
+    this.propFormBillingFrequency.set(prop.billingFrequency || 'BIMONTHLY');
+    this.propFormNoMetersMode.set(Boolean(prop.noMetersMode));
+    this.propFormWeightMeter.set(prop.defaultCriteria.weightMeter);
+    this.propFormPeopleUs.set(prop.defaultCriteria.peopleUs);
+    this.propFormPeopleTenant.set(prop.defaultCriteria.peopleTenant);
+    this.propFormLuceSubOwner.set(prop.defaultCriteria.luceSubOwner);
+    this.propFormGasSubOwner.set(prop.defaultCriteria.gasSubOwner);
+    this.propFormAcquaSubOwner.set(prop.defaultCriteria.acquaSubOwner);
+    this.propFormApplyToActivePeriod.set(true);
+    this.isPropertyModalOpen.set(true);
+  }
+
+  getBillingFrequencyLabel(freq?: BillingFrequency): string {
+    switch (freq) {
+      case 'MONTHLY':
+        return 'Mensile';
+      case 'QUARTERLY':
+        return 'Trimestrale';
+      case 'BIMONTHLY':
+      default:
+        return 'Bimestrale';
+    }
+  }
+
+  private buildPeriodSuggestion(
+    freq: BillingFrequency,
+    baseDateStr?: string
+  ): { name: string; dateStart: string; dateEnd: string } {
+    const monthsIt = [
+      'Gennaio',
+      'Febbraio',
+      'Marzo',
+      'Aprile',
+      'Maggio',
+      'Giugno',
+      'Luglio',
+      'Agosto',
+      'Settembre',
+      'Ottobre',
+      'Novembre',
+      'Dicembre',
+    ];
+    let startDate = new Date();
+    if (baseDateStr && /^\d{2}\/\d{2}\/\d{4}$/.test(baseDateStr.trim())) {
+      const [dd, mm, yyyy] = baseDateStr.trim().split('/').map(Number);
+      const parsed = new Date(yyyy, mm - 1, dd);
+      if (!Number.isNaN(parsed.getTime())) {
+        startDate = parsed;
+      }
+    } else {
+      startDate = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+    }
+
+    const spanMonths = freq === 'MONTHLY' ? 1 : freq === 'QUARTERLY' ? 3 : 2;
+    const endDate = new Date(
+      startDate.getFullYear(),
+      startDate.getMonth() + spanMonths,
+      startDate.getDate() === 1 ? 0 : startDate.getDate()
+    );
+
+    const startMonthName = monthsIt[startDate.getMonth()];
+    const endMonthIdx = (startDate.getMonth() + spanMonths - 1) % 12;
+    const endYear = startDate.getFullYear() + Math.floor((startDate.getMonth() + spanMonths - 1) / 12);
+    const endMonthName = monthsIt[endMonthIdx];
+
+    const name =
+      spanMonths === 1
+        ? `${startMonthName} ${startDate.getFullYear()}`
+        : `${startMonthName} - ${endMonthName} ${endYear}`;
+
+    const fmt = (d: Date) =>
+      `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+
+    return {
+      name,
+      dateStart: fmt(startDate),
+      dateEnd: fmt(endDate),
+    };
+  }
+
+  closePropertyModal(): void {
+    this.isPropertyModalOpen.set(false);
+  }
+
+  savePropertyModal(): void {
+    const name = this.propFormName().trim();
+    if (!name) {
+      this.stateService.showToast('Inserisci il nome o indirizzo breve dell’immobile.', 'warning');
+      return;
+    }
+
+    const address = this.propFormAddress().trim() || name;
+    const ownerFloor = this.propFormOwnerFloor();
+    const labelUs = this.propFormLabelUs().trim() || 'Proprietà';
+    const labelTenant = this.propFormLabelTenant().trim() || 'Inquilini';
+    const defaultRent = Math.max(0, Number(this.propFormDefaultRent()) || 0);
+    const noMetersMode = Boolean(this.propFormNoMetersMode());
+    const weightMeter = noMetersMode
+      ? 0
+      : Math.min(100, Math.max(0, Number(this.propFormWeightMeter()) || 0));
+    const weightPeople = 100 - weightMeter;
+    const peopleUs = Math.max(0, Number(this.propFormPeopleUs()) || 1);
+    const peopleTenant = Math.max(0, Number(this.propFormPeopleTenant()) || 1);
+
+    const defaultCriteria = {
+      weightMeter,
+      weightPeople,
+      peopleUs,
+      peopleTenant,
+      luceSubOwner: this.propFormLuceSubOwner(),
+      gasSubOwner: this.propFormGasSubOwner(),
+      acquaSubOwner: this.propFormAcquaSubOwner(),
+    };
+
+    const billingFrequency = this.propFormBillingFrequency();
+
+    if (this.propertyModalMode() === 'CREATE') {
+      const propId = `prop_${Date.now()}`;
+      const firstPeriodId = `per_${Date.now()}_1`;
+      const suggestion = this.buildPeriodSuggestion(billingFrequency);
+      const newProp: PropertyConfig = {
+        id: propId,
+        icon: this.propFormIcon(),
+        name,
+        address,
+        labelUs,
+        labelTenant,
+        ownerFloor,
+        defaultRent,
+        billingFrequency,
+        noMetersMode,
+        defaultCriteria,
+        activePeriodId: firstPeriodId,
+        bankTransfers: [],
+        periods: [
+          {
+            id: firstPeriodId,
+            name: suggestion.name,
+            dateStart: suggestion.dateStart,
+            dateEnd: suggestion.dateEnd,
+            status: 'DA_SALDARE',
+            transferDate: '',
+            notes: '',
+            criteria: JSON.parse(JSON.stringify(defaultCriteria)),
+            luce: { bill: 0, genStart: 0, genEnd: 0, subStart: 0, subEnd: 0, manualTenant: null },
+            gas: { bill: 0, genStart: 0, genEnd: 0, subStart: 0, subEnd: 0, manualTenant: null },
+            acqua: { bill: 0, genStart: 0, genEnd: 0, subStart: 0, subEnd: 0, manualTenant: null },
+          },
+        ],
+      };
+
+      this.stateService.createProperty(newProp);
+      this.pdfCustomRent.set(null);
+      this.isPropertyModalOpen.set(false);
+    } else {
+      const prop = this.activeProperty();
+      this.stateService.updatePropertyConfig(
+        prop.id,
+        {
+          icon: this.propFormIcon(),
+          name,
+          address,
+          labelUs,
+          labelTenant,
+          ownerFloor,
+          defaultRent,
+          billingFrequency,
+          noMetersMode,
+          defaultCriteria,
+        },
+        this.propFormApplyToActivePeriod()
+      );
+      this.pdfCustomRent.set(null);
+      this.isPropertyModalOpen.set(false);
+    }
+  }
+
+  deleteCurrentProperty(): void {
+    const prop = this.activeProperty();
+    if (this.propertyList().length <= 1) {
+      this.stateService.showToast('Deve rimanere almeno un immobile nel gestionale.', 'warning');
+      return;
+    }
+    if (
+      confirm(
+        `Sei sicuro di voler eliminare l'immobile "${prop.name}" e tutti i suoi periodi?`
+      )
+    ) {
+      if (this.stateService.deleteProperty(prop.id)) {
+        this.isPropertyModalOpen.set(false);
+      }
+    }
+  }
+
   // Modifica Campi Utenze e Rettifica Manuale
   onUtilityInput(): void {
     this.stateService.saveState();
@@ -372,9 +666,11 @@ export class App {
   openNewPeriodModal(): void {
     const prop = this.activeProperty();
     const lastPeriod = prop.periods[prop.periods.length - 1];
-    this.newPeriodName.set('Settembre - Ottobre 2026');
-    this.newPeriodDateStart.set(lastPeriod ? lastPeriod.dateEnd : this.getTodayFormatted());
-    this.newPeriodDateEnd.set('');
+    const freq = prop.billingFrequency || 'BIMONTHLY';
+    const suggestion = this.buildPeriodSuggestion(freq, lastPeriod?.dateEnd);
+    this.newPeriodName.set(suggestion.name);
+    this.newPeriodDateStart.set(suggestion.dateStart);
+    this.newPeriodDateEnd.set(suggestion.dateEnd);
     this.newPeriodCopyReadings.set(true);
     this.isNewPeriodModalOpen.set(true);
   }
@@ -495,6 +791,14 @@ export class App {
     this.fileProcessor.removeStagedFile(stageId);
   }
 
+  setStagedFileTarget(stageId: string, target: StagedTargetCategory): void {
+    this.fileProcessor.setStagedFileTarget(stageId, target);
+  }
+
+  getStagedFiles(): StagedFileItem[] {
+    return this.fileProcessor.stagedFilesQueue();
+  }
+
   clearAllStagedFiles(): void {
     this.fileProcessor.clearAllStagedFiles();
   }
@@ -541,7 +845,7 @@ export class App {
   resetFactoryDefaults(): void {
     if (
       confirm(
-        'Ripristinare i dati storici originali della specifica (Greta Garbo & Marilyn Monroe)?'
+        'Azzerare tutti gli immobili e i periodi riportando il gestionale allo stato iniziale vuoto?'
       )
     ) {
       this.stateService.resetFactoryDefaults();

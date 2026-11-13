@@ -1,10 +1,10 @@
 import { TestBed } from '@angular/core/testing';
 import { App } from './app';
-import { createInitialDefaultState } from './models/billing.models';
+import { BillingPeriod, createInitialDefaultState, STORAGE_KEY } from './models/billing.models';
 import { BillingCalculatorService } from './services/billing-calculator.service';
 import { StateService } from './services/state.service';
 
-describe('Gestionale Ripartizione Bollette — Verifica Specifica Tecnica', () => {
+describe('Gestionale Ripartizione Bollette — Suite di Verifica', () => {
   let calcService: BillingCalculatorService;
   let stateService: StateService;
 
@@ -18,159 +18,122 @@ describe('Gestionale Ripartizione Bollette — Verifica Specifica Tecnica', () =
     stateService = TestBed.inject(StateService);
   });
 
-  it('dovrebbe creare il componente principale App', () => {
+  it('dovrebbe creare il componente principale App con stato iniziale pulito', () => {
     const fixture = TestBed.createComponent(App);
     const app = fixture.componentInstance;
     expect(app).toBeTruthy();
+    expect(app.propertyList().length).toBe(1);
+    expect(app.activeProperty().id).toBe('immobile_1');
+    expect(app.activeProperty().periods.length).toBe(1);
+    expect(app.activeProperty().bankTransfers.length).toBe(0);
   });
 
-  it('Sezione 3.4 — Verifica al centesimo di tutti i 4 periodi storici di Via Greta Garbo 13', () => {
+  it('Motore Matematico — Verifica al centesimo della ripartizione mista contatori + persone', () => {
     const state = createInitialDefaultState();
-    const greta = state.properties.greta_garbo;
+    const prop = state.properties['immobile_1'];
 
-    // 1. Febbraio - Marzo 2026
-    const pFebMar = greta.periods.find((p) => p.id === 'feb_mar_2026')!;
-    const sumFebMar = calcService.computePeriodSummary(pFebMar, greta);
-    expect(sumFebMar.luce.deltaGen).toBe(785);
-    expect(sumFebMar.luce.deltaSub).toBe(397);
-    expect(sumFebMar.luce.shareUs).toBe(96.1);
-    expect(sumFebMar.luce.shareTenant).toBe(177.17);
+    const samplePeriod: BillingPeriod = {
+      id: 'test_period',
+      name: 'Bimestre Test',
+      dateStart: '01/01/2026',
+      dateEnd: '28/02/2026',
+      status: 'DA_SALDARE',
+      transferDate: '',
+      notes: '',
+      criteria: {
+        weightMeter: 30,
+        weightPeople: 70,
+        peopleUs: 2,
+        peopleTenant: 5,
+        luceSubOwner: 'US',
+        gasSubOwner: 'US',
+        acquaSubOwner: 'TENANT',
+      },
+      luce: {
+        bill: 273.27,
+        genStart: 25689,
+        genEnd: 26474,
+        subStart: 21692,
+        subEnd: 22089,
+        manualTenant: null,
+      },
+      gas: {
+        bill: 495.81,
+        genStart: 14303,
+        genEnd: 14541,
+        subStart: 8734,
+        subEnd: 8850,
+        manualTenant: null,
+      },
+      acqua: {
+        bill: 198.06,
+        genStart: 259,
+        genEnd: 312,
+        subStart: 1423,
+        subEnd: 1454,
+        manualTenant: null,
+      },
+    };
 
-    expect(sumFebMar.gas.deltaGen).toBe(238);
-    expect(sumFebMar.gas.deltaSub).toBe(116);
-    expect(sumFebMar.gas.shareUs).toBe(171.7);
-    expect(sumFebMar.gas.shareTenant).toBe(324.11);
+    const sum = calcService.computePeriodSummary(samplePeriod, prop);
+    expect(sum.luce.deltaGen).toBe(785);
+    expect(sum.luce.deltaSub).toBe(397);
+    expect(sum.luce.shareUs).toBe(96.1);
+    expect(sum.luce.shareTenant).toBe(177.17);
 
-    expect(sumFebMar.acqua.deltaGen).toBe(53);
-    expect(sumFebMar.acqua.deltaSub).toBe(31);
-    expect(sumFebMar.acqua.shareUs).toBe(64.26);
-    expect(sumFebMar.acqua.shareTenant).toBe(133.8);
+    expect(sum.gas.deltaGen).toBe(238);
+    expect(sum.gas.deltaSub).toBe(116);
+    expect(sum.gas.shareUs).toBe(171.7);
+    expect(sum.gas.shareTenant).toBe(324.11);
 
-    expect(sumFebMar.totalBill).toBe(967.14);
-    expect(sumFebMar.totalUs).toBe(332.06);
-    expect(sumFebMar.totalTenant).toBe(635.08);
+    expect(sum.acqua.deltaGen).toBe(53);
+    expect(sum.acqua.deltaSub).toBe(31);
+    expect(sum.acqua.shareUs).toBe(64.26);
+    expect(sum.acqua.shareTenant).toBe(133.8);
 
-    // 2. Aprile 2026
-    const pApr = greta.periods.find((p) => p.id === 'aprile_2026')!;
-    const sumApr = calcService.computePeriodSummary(pApr, greta);
-    expect(sumApr.luce.deltaGen).toBe(426);
-    expect(sumApr.luce.deltaSub).toBe(188);
-    expect(sumApr.luce.shareUs).toBe(33.2);
-    expect(sumApr.luce.shareTenant).toBe(66.83);
-
-    expect(sumApr.gas.deltaGen).toBe(269);
-    expect(sumApr.gas.deltaSub).toBe(39);
-    expect(sumApr.gas.shareUs).toBe(4.8);
-    expect(sumApr.gas.shareTenant).toBe(14.98);
-
-    expect(sumApr.acqua.deltaGen).toBe(28);
-    expect(sumApr.acqua.deltaSub).toBe(15);
-    expect(sumApr.acqua.shareUs).toBe(0.0);
-    expect(sumApr.acqua.shareTenant).toBe(0.0);
-
-    expect(sumApr.totalBill).toBe(119.81);
-    expect(sumApr.totalUs).toBe(38.0);
-    expect(sumApr.totalTenant).toBe(81.81);
-
-    // 3. Maggio - Giugno 2026
-    const pMagGiu = greta.periods.find((p) => p.id === 'mag_giu_2026')!;
-    const sumMagGiu = calcService.computePeriodSummary(pMagGiu, greta);
-    expect(sumMagGiu.luce.deltaGen).toBe(1276);
-    expect(sumMagGiu.luce.deltaSub).toBe(379);
-    expect(sumMagGiu.luce.shareUs).toBe(81.9);
-    expect(sumMagGiu.luce.shareTenant).toBe(201.39);
-
-    expect(sumMagGiu.gas.deltaGen).toBe(79);
-    expect(sumMagGiu.gas.deltaSub).toBe(42);
-    expect(sumMagGiu.gas.shareUs).toBe(58.4);
-    expect(sumMagGiu.gas.shareTenant).toBe(104.09);
-
-    expect(sumMagGiu.acqua.deltaGen).toBe(57);
-    expect(sumMagGiu.acqua.deltaSub).toBe(31);
-    expect(sumMagGiu.acqua.shareUs).toBe(93.43);
-    expect(sumMagGiu.acqua.shareTenant).toBe(183.9);
-
-    expect(sumMagGiu.totalBill).toBe(723.11);
-    expect(sumMagGiu.totalUs).toBe(233.73);
-    expect(sumMagGiu.totalTenant).toBe(489.38);
-
-    // 4. Luglio - Agosto 2026
-    const pLugAgo = greta.periods.find((p) => p.id === 'lug_ago_2026')!;
-    const sumLugAgo = calcService.computePeriodSummary(pLugAgo, greta);
-    expect(sumLugAgo.luce.deltaGen).toBe(1003);
-    expect(sumLugAgo.luce.deltaSub).toBe(260);
-    expect(sumLugAgo.luce.shareUs).toBe(114.6);
-    expect(sumLugAgo.luce.shareTenant).toBe(297.92);
-
-    expect(sumLugAgo.gas.deltaGen).toBe(25);
-    expect(sumLugAgo.gas.deltaSub).toBe(8);
-    expect(sumLugAgo.gas.shareUs).toBe(27.5);
-    expect(sumLugAgo.gas.shareTenant).toBe(65.4);
-
-    expect(sumLugAgo.acqua.deltaGen).toBe(28);
-    expect(sumLugAgo.acqua.deltaSub).toBe(14);
-    expect(sumLugAgo.acqua.shareUs).toBe(89.19);
-    expect(sumLugAgo.acqua.shareTenant).toBe(165.6);
-
-    expect(sumLugAgo.totalBill).toBe(760.21);
-    expect(sumLugAgo.totalUs).toBe(231.29);
-    expect(sumLugAgo.totalTenant).toBe(528.92);
+    expect(sum.totalBill).toBe(967.14);
+    expect(sum.totalUs).toBe(332.06);
+    expect(sum.totalTenant).toBe(635.08);
   });
 
-  it('Sezione 5 — Rilevamento modifiche con savedBaselineString e ripristino immediato', () => {
+  it('Rilevamento modifiche con savedBaselineString e ripristino immediato', () => {
     expect(stateService.hasUnsavedChanges()).toBe(false);
 
     const period = stateService.activePeriod();
     const originalLuceBill = period.luce.bill;
 
-    // Modifica valore -> hasUnsavedChanges diventa true
     period.luce.bill = 999.99;
     stateService.saveState();
     expect(stateService.hasUnsavedChanges()).toBe(true);
 
-    // Rimette il valore originale -> hasUnsavedChanges torna immediatamente false
     period.luce.bill = originalLuceBill;
     stateService.saveState();
     expect(stateService.hasUnsavedChanges()).toBe(false);
   });
 
-  it('Sezione 7.3 — Comportamento reattivo della data bonifico (updatePeriodTransferDate)', () => {
+  it('Comportamento reattivo della data bonifico (updatePeriodTransferDate) e togglePeriodStatus', () => {
     const fixture = TestBed.createComponent(App);
     const app = fixture.componentInstance;
-    const period = stateService.activeProperty().periods.find((p) => p.id === 'lug_ago_2026')!;
+    const period = stateService.activePeriod();
     expect(period.status).toBe('DA_SALDARE');
 
     app.updatePeriodTransferDate(period, '15/09/2026');
     expect(period.status).toBe('PAGATO');
 
-    app.updatePeriodTransferDate(period, '');
+    app.togglePeriodStatus(period);
     expect(period.status).toBe('DA_SALDARE');
+    expect(period.transferDate).toBe('');
   });
 
-  it('Fix Logici — Sincronizzazione bidirezionale togglePeriodStatus, clamping [0, B], conguaglio bankTransfers e correzione discontinuità', () => {
+  it('Agente IA Locale Gratuito (Zero API Key): riconoscimento automatico per continuità storica e OCR', () => {
     const fixture = TestBed.createComponent(App);
     const app = fixture.componentInstance;
 
-    // 1. Verifica conguaglio arrotondamenti bankTransfers su Greta Garbo (+0.19€ Aprile + 0.62€ Mag-Giu = +0.81€)
-    expect(app.historicalTotals().totalRoundingBalance).toBe(0.81);
+    const p = stateService.activePeriod();
+    p.luce.genStart = 28176;
+    p.acqua.subStart = 1500;
+    stateService.saveState();
 
-    // 2. Verifica che togglePeriodStatus da PAGATO a DA_SALDARE svuoti anche transferDate (evitando stati incoerenti)
-    const pMagGiu = stateService.activeProperty().periods.find((p) => p.id === 'mag_giu_2026')!;
-    expect(pMagGiu.status).toBe('PAGATO');
-    expect(pMagGiu.transferDate).toBe('31/07/2026');
-    app.togglePeriodStatus(pMagGiu);
-    expect(pMagGiu.status).toBe('DA_SALDARE');
-    expect(pMagGiu.transferDate).toBe('');
-
-    // 3. Verifica rilevamento e correzione 1-click della discontinuità storica Gas (Aprile 14810 vs Mag-Giu 14610)
-    stateService.setActivePeriod('mag_giu_2026');
-    expect(app.activePeriodSummary().gas.warnings.length).toBeGreaterThan(0);
-    app.alignPreviousEndWithCurrentStart('gas');
-    expect(app.previousPeriod()!.gas.genEnd).toBe(14610);
-    expect(app.activePeriodSummary().gas.warnings.length).toBe(0);
-
-    // 4. Verifica Agente IA Locale Gratuito (Zero API Key): riconoscimento automatico per continuità storica e OCR
-    stateService.setActivePeriod('lug_ago_2026');
     const fp = app.fileProcessor as any;
     const resLuceGen = fp.interpretOcrAndVisuals(
       'IMG_001.jpg',
@@ -181,7 +144,6 @@ describe('Gestionale Ripartizione Bollette — Verifica Specifica Tecnica', () =
     expect(resLuceGen.category).toBe('LUCE_GEN');
     expect(resLuceGen.value).toBe(29179);
 
-    // Anche senza etichetta testuale, il motore di continuità storica abbina 1514 al sotto-contatore Acqua (subStart=1500)
     const resAcquaSub = fp.interpretOcrAndVisuals(
       'foto_contatore.jpg',
       '01514 m3',
@@ -190,5 +152,73 @@ describe('Gestionale Ripartizione Bollette — Verifica Specifica Tecnica', () =
     );
     expect(resAcquaSub.category).toBe('ACQUA_SUB');
     expect(resAcquaSub.value).toBe(1514);
+  });
+
+  it('Struttura Dinamica — Creazione nuovi immobili, indirizzi, inquilini e personalizzazione per periodo', () => {
+    const fixture = TestBed.createComponent(App);
+    const app = fixture.componentInstance;
+
+    expect(app.propertyList().length).toBe(1);
+
+    app.openCreatePropertyModal();
+    app.propFormIcon.set('🏢');
+    app.propFormName.set('Immobile Secondario');
+    app.propFormAddress.set('Corso Italia 10');
+    app.propFormLabelUs.set('Proprietario');
+    app.propFormLabelTenant.set('Famiglia Bianchi');
+    app.propFormOwnerFloor.set('SOPRA');
+    app.propFormDefaultRent.set(1650);
+    app.propFormBillingFrequency.set('QUARTERLY');
+    app.propFormNoMetersMode.set(false);
+    app.propFormWeightMeter.set(40);
+    app.propFormPeopleUs.set(2);
+    app.propFormPeopleTenant.set(3);
+    app.savePropertyModal();
+
+    expect(app.propertyList().length).toBe(2);
+    expect(app.activeProperty().name).toBe('Immobile Secondario');
+    expect(app.activeProperty().ownerFloor).toBe('SOPRA');
+    expect(app.ownerFloorLabel()).toBe('Piano Sopra');
+    expect(app.tenantFloorLabel()).toBe('Piano Sotto');
+    expect(app.activeProperty().billingFrequency).toBe('QUARTERLY');
+    expect(app.getBillingFrequencyLabel(app.activeProperty().billingFrequency)).toBe('Trimestrale');
+    expect(app.effectiveLabelTenant()).toBe('Famiglia Bianchi');
+    expect(app.effectiveRentAmount()).toBe(1650);
+
+    app.activePeriod().customLabelTenant = 'Nuovi Inquilini Verdi';
+    app.activePeriod().customRent = 1700;
+    stateService.saveState();
+    expect(app.effectiveLabelTenant()).toBe('Nuovi Inquilini Verdi');
+    expect(app.effectiveRentAmount()).toBe(1700);
+  });
+
+  it('Sicurezza — Protezione localStorage (offuscamento + checksum integrità) e validazione rigorosa schema importBackupJson', () => {
+    stateService.saveState();
+    const rawStored = localStorage.getItem(STORAGE_KEY)!;
+    expect(rawStored).toBeTruthy();
+
+    expect(rawStored.includes('Immobile 1')).toBe(false);
+    const parsedEnvelope = JSON.parse(rawStored);
+    expect(parsedEnvelope.__v).toBe('OBF_V1');
+    expect(typeof parsedEnvelope.checksum).toBe('string');
+
+    expect(stateService.importBackupJson('non è un json')).toBe(false);
+    expect(stateService.importBackupJson(JSON.stringify({ properties: {} }))).toBe(false);
+    expect(
+      stateService.importBackupJson(
+        JSON.stringify({
+          properties: {
+            test_prop: {
+              id: 'test_prop',
+              name: 'Immobile Incompleto senza periodi validi',
+              periods: [],
+            },
+          },
+        })
+      )
+    ).toBe(false);
+
+    const validExport = stateService.exportBackupJson();
+    expect(stateService.importBackupJson(validExport)).toBe(true);
   });
 });
