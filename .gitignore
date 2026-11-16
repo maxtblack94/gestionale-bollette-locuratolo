@@ -47,3 +47,6 @@ Thumbs.db
 /public/local-seed.config.json
 *.local.json
 /specifica_tecnica_completa_gestionale_bollette.md
+
+# Artefatti eseguibile Electron
+/release

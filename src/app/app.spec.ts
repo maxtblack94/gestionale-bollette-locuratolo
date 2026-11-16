@@ -221,4 +221,43 @@ describe('Gestionale Ripartizione Bollette — Suite di Verifica', () => {
     const validExport = stateService.exportBackupJson();
     expect(stateService.importBackupJson(validExport)).toBe(true);
   });
+
+  it('UI — Le card utenze sono collassabili, indipendenti e la preferenza viene persistita', () => {
+    const fixture = TestBed.createComponent(App);
+    const app = fixture.componentInstance;
+
+    // Di default le card sono compresse per mantenere pulita la home
+    expect(app.isUtilityCollapsed('luce')).toBe(true);
+    expect(app.areAllUtilitiesCollapsed()).toBe(true);
+
+    // Il toggle di una card non influenza le altre
+    app.toggleUtilityCollapse('gas');
+    expect(app.isUtilityCollapsed('gas')).toBe(false);
+    expect(app.isUtilityCollapsed('luce')).toBe(true);
+    expect(app.isUtilityCollapsed('acqua')).toBe(true);
+    expect(app.areAllUtilitiesCollapsed()).toBe(false);
+
+    // Con stato misto il pulsante mostra "Comprimi tutto": il click chiude tutte le card
+    app.toggleAllUtilities();
+    expect(app.areAllUtilitiesCollapsed()).toBe(true);
+
+    // Ora il pulsante mostra "Espandi tutto": il click le apre tutte
+    app.toggleAllUtilities();
+    expect(app.isUtilityCollapsed('luce')).toBe(false);
+    expect(app.isUtilityCollapsed('gas')).toBe(false);
+    expect(app.isUtilityCollapsed('acqua')).toBe(false);
+
+    app.toggleAllUtilities();
+    expect(app.areAllUtilitiesCollapsed()).toBe(true);
+
+    // La preferenza è persistita fuori dallo stato dati del gestionale
+    app.toggleUtilityCollapse('acqua');
+    const rawPrefs = localStorage.getItem('gestionale_bollette_ui_prefs_v1');
+    expect(rawPrefs).toBeTruthy();
+    expect(JSON.parse(rawPrefs!).acqua).toBe(false);
+
+    const rebuilt = TestBed.createComponent(App).componentInstance;
+    expect(rebuilt.isUtilityCollapsed('acqua')).toBe(false);
+    expect(rebuilt.isUtilityCollapsed('luce')).toBe(true);
+  });
 });

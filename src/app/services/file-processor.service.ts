@@ -6,14 +6,6 @@ import {
 } from '../models/billing.models';
 import { StateService } from './state.service';
 
-declare global {
-  interface Window {
-    pdfjsLib?: any;
-    XLSX?: any;
-    Tesseract?: any;
-  }
-}
-
 interface ParsedImageReading {
   category: StagedTargetCategory;
   value: number | null;
@@ -206,7 +198,7 @@ export class FileProcessorService {
     let ocrText = '';
 
     try {
-      const tesseractMod: any = window.Tesseract || (await import('tesseract.js'));
+      const tesseractMod: any = await import('tesseract.js');
       const recognizeFn = tesseractMod?.recognize || tesseractMod?.default?.recognize;
       if (recognizeFn) {
         this.currentStatusLabel.set(`🤖 Agente OCR Locale in lettura su ${file.name}...`);
@@ -604,12 +596,12 @@ export class FileProcessorService {
   }
 
   private async processPdfFile(file: File): Promise<string> {
-    const pdfjsLib: any = window.pdfjsLib || (await import('pdfjs-dist'));
-    if (!pdfjsLib) {
+    const pdfjsLib: any = await import('pdfjs-dist');
+    if (!pdfjsLib?.getDocument) {
       throw new Error('Libreria PDF.js non caricata.');
     }
     if (pdfjsLib.GlobalWorkerOptions && !pdfjsLib.GlobalWorkerOptions.workerSrc) {
-      pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'pdf.worker.min.mjs';
     }
 
     const arrayBuffer = await file.arrayBuffer();
@@ -657,9 +649,9 @@ export class FileProcessorService {
   }
 
   private async processExcelFile(file: File): Promise<string> {
-    const xlsxMod: any = window.XLSX || (await import('xlsx'));
+    const xlsxMod: any = await import('xlsx');
     const XLSX = xlsxMod?.read ? xlsxMod : xlsxMod?.default;
-    if (!XLSX) {
+    if (!XLSX?.read) {
       throw new Error('Libreria SheetJS (XLSX) non caricata.');
     }
 

@@ -682,15 +682,48 @@
 
       <!-- 4. GRIGLIA DELLE 3 UTENZE (Luce, Gas, Acqua) -->
       <div class="space-y-4">
-        
+
+        <div class="flex items-center justify-between gap-2">
+          <h2 class="text-sm font-bold uppercase tracking-wider text-slate-400">Utenze del Periodo</h2>
+          <button
+            type="button"
+            (click)="toggleAllUtilities()"
+            class="text-xs px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-300 font-semibold">
+            {{ areAllUtilitiesCollapsed() ? '⤢ Espandi tutto' : '⤡ Comprimi tutto' }}
+          </button>
+        </div>
+
         <!-- RIGA 1: LUCE -->
         <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-lg space-y-3">
-          <div class="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-slate-800">
+          <button
+            type="button"
+            (click)="toggleUtilityCollapse('luce')"
+            [attr.aria-expanded]="!isUtilityCollapsed('luce')"
+            aria-controls="utility-body-luce"
+            class="w-full flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-slate-800 text-left group">
             <div class="flex items-center gap-2.5">
+              <span class="text-xs w-3 text-slate-500 group-hover:text-slate-300">{{ isUtilityCollapsed('luce') ? '▶' : '▼' }}</span>
               <span class="text-xl">💡</span>
               <h3 class="text-base font-extrabold text-amber-300">Energia Elettrica (Luce — kWh)</h3>
             </div>
-            @if (!isNoMetersProperty()) {
+            @if (isUtilityCollapsed('luce')) {
+              <span class="flex flex-wrap items-center gap-1.5 text-xs">
+                @if (activePeriodSummary().luce.warnings.length > 0) {
+                  <span class="px-2 py-1 rounded-lg bg-amber-950/80 border border-amber-500/40 text-amber-300 font-bold">
+                    ⚠️ {{ activePeriodSummary().luce.warnings.length }}
+                  </span>
+                }
+                <span class="px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-800 text-slate-300">
+                  Bolletta <strong class="text-white">€ {{ formatEuro(activePeriodSummary().luce.billAmount) }}</strong>
+                </span>
+                <span class="px-2.5 py-1 rounded-lg bg-slate-950 border border-indigo-500/40 text-slate-300">
+                  {{ effectiveLabelUs() }} <strong class="text-indigo-300">€ {{ formatEuro(activePeriodSummary().luce.shareUs) }}</strong>
+                </span>
+                <span class="px-2.5 py-1 rounded-lg bg-slate-950 border border-emerald-500/40 text-slate-300">
+                  {{ effectiveLabelTenant() }} <strong class="text-emerald-300">€ {{ formatEuro(activePeriodSummary().luce.shareTenant) }}</strong>
+                </span>
+              </span>
+            } @else if (!isNoMetersProperty()) {
               <span class="text-xs px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-800 text-slate-300">
                 Sotto-contatore misura:
                 <strong class="text-indigo-300">
@@ -698,9 +731,10 @@
                 </strong>
               </span>
             }
-          </div>
+          </button>
 
-          <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-center">
+          @if (!isUtilityCollapsed('luce')) {
+          <div id="utility-body-luce" class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-center">
             <!-- Importo Bolletta -->
             <div class="lg:col-span-3 bg-slate-950 border border-slate-800 rounded-xl p-3.5">
               <label class="block text-xs font-bold uppercase text-slate-400 mb-1.5">Importo Bolletta (€)</label>
@@ -836,16 +870,40 @@
               }
             </div>
           }
+          }
         </div>
 
         <!-- RIGA 2: GAS -->
         <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-lg space-y-3">
-          <div class="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-slate-800">
+          <button
+            type="button"
+            (click)="toggleUtilityCollapse('gas')"
+            [attr.aria-expanded]="!isUtilityCollapsed('gas')"
+            aria-controls="utility-body-gas"
+            class="w-full flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-slate-800 text-left group">
             <div class="flex items-center gap-2.5">
+              <span class="text-xs w-3 text-slate-500 group-hover:text-slate-300">{{ isUtilityCollapsed('gas') ? '▶' : '▼' }}</span>
               <span class="text-xl">🔥</span>
               <h3 class="text-base font-extrabold text-orange-300">Gas Metano (m³ / Smc)</h3>
             </div>
-            @if (!isNoMetersProperty()) {
+            @if (isUtilityCollapsed('gas')) {
+              <span class="flex flex-wrap items-center gap-1.5 text-xs">
+                @if (activePeriodSummary().gas.warnings.length > 0) {
+                  <span class="px-2 py-1 rounded-lg bg-amber-950/80 border border-amber-500/40 text-amber-300 font-bold">
+                    ⚠️ {{ activePeriodSummary().gas.warnings.length }}
+                  </span>
+                }
+                <span class="px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-800 text-slate-300">
+                  Bolletta <strong class="text-white">€ {{ formatEuro(activePeriodSummary().gas.billAmount) }}</strong>
+                </span>
+                <span class="px-2.5 py-1 rounded-lg bg-slate-950 border border-indigo-500/40 text-slate-300">
+                  {{ effectiveLabelUs() }} <strong class="text-indigo-300">€ {{ formatEuro(activePeriodSummary().gas.shareUs) }}</strong>
+                </span>
+                <span class="px-2.5 py-1 rounded-lg bg-slate-950 border border-emerald-500/40 text-slate-300">
+                  {{ effectiveLabelTenant() }} <strong class="text-emerald-300">€ {{ formatEuro(activePeriodSummary().gas.shareTenant) }}</strong>
+                </span>
+              </span>
+            } @else if (!isNoMetersProperty()) {
               <span class="text-xs px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-800 text-slate-300">
                 Sotto-contatore misura:
                 <strong class="text-indigo-300">
@@ -853,9 +911,10 @@
                 </strong>
               </span>
             }
-          </div>
+          </button>
 
-          <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-center">
+          @if (!isUtilityCollapsed('gas')) {
+          <div id="utility-body-gas" class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-center">
             <!-- Importo Bolletta -->
             <div class="lg:col-span-3 bg-slate-950 border border-slate-800 rounded-xl p-3.5">
               <label class="block text-xs font-bold uppercase text-slate-400 mb-1.5">Importo Bolletta (€)</label>
@@ -991,16 +1050,40 @@
               }
             </div>
           }
+          }
         </div>
 
         <!-- RIGA 3: ACQUA -->
         <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-lg space-y-3">
-          <div class="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-slate-800">
+          <button
+            type="button"
+            (click)="toggleUtilityCollapse('acqua')"
+            [attr.aria-expanded]="!isUtilityCollapsed('acqua')"
+            aria-controls="utility-body-acqua"
+            class="w-full flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-slate-800 text-left group">
             <div class="flex items-center gap-2.5">
+              <span class="text-xs w-3 text-slate-500 group-hover:text-slate-300">{{ isUtilityCollapsed('acqua') ? '▶' : '▼' }}</span>
               <span class="text-xl">💧</span>
               <h3 class="text-base font-extrabold text-cyan-300">Servizio Idrico (Acqua ACEA — m³)</h3>
             </div>
-            @if (!isNoMetersProperty()) {
+            @if (isUtilityCollapsed('acqua')) {
+              <span class="flex flex-wrap items-center gap-1.5 text-xs">
+                @if (activePeriodSummary().acqua.warnings.length > 0) {
+                  <span class="px-2 py-1 rounded-lg bg-amber-950/80 border border-amber-500/40 text-amber-300 font-bold">
+                    ⚠️ {{ activePeriodSummary().acqua.warnings.length }}
+                  </span>
+                }
+                <span class="px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-800 text-slate-300">
+                  Bolletta <strong class="text-white">€ {{ formatEuro(activePeriodSummary().acqua.billAmount) }}</strong>
+                </span>
+                <span class="px-2.5 py-1 rounded-lg bg-slate-950 border border-indigo-500/40 text-slate-300">
+                  {{ effectiveLabelUs() }} <strong class="text-indigo-300">€ {{ formatEuro(activePeriodSummary().acqua.shareUs) }}</strong>
+                </span>
+                <span class="px-2.5 py-1 rounded-lg bg-slate-950 border border-emerald-500/40 text-slate-300">
+                  {{ effectiveLabelTenant() }} <strong class="text-emerald-300">€ {{ formatEuro(activePeriodSummary().acqua.shareTenant) }}</strong>
+                </span>
+              </span>
+            } @else if (!isNoMetersProperty()) {
               <span class="text-xs px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-800 text-slate-300">
                 Sotto-contatore (12-370035) misura:
                 <strong class="text-emerald-300">
@@ -1008,9 +1091,10 @@
                 </strong>
               </span>
             }
-          </div>
+          </button>
 
-          <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-center">
+          @if (!isUtilityCollapsed('acqua')) {
+          <div id="utility-body-acqua" class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-center">
             <!-- Importo Bolletta -->
             <div class="lg:col-span-3 bg-slate-950 border border-slate-800 rounded-xl p-3.5">
               <label class="block text-xs font-bold uppercase text-slate-400 mb-1.5">Importo Bolletta (€)</label>
@@ -1145,6 +1229,7 @@
                 </div>
               }
             </div>
+          }
           }
         </div>
       </div>

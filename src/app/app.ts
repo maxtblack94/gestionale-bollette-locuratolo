@@ -19,6 +19,8 @@ import { BillingCalculatorService } from './services/billing-calculator.service'
 import { FileProcessorService } from './services/file-processor.service';
 import { StateService } from './services/state.service';
 
+const UI_PREFS_KEY = 'gestionale_bollette_ui_prefs_v1';
+
 @Component({
   selector: 'app-root',
   standalone: true,
@@ -35,6 +37,9 @@ export class App {
   readonly activeTab = signal<ActiveTab>('calcolo');
   readonly isCriteriaDrawerOpen = signal<boolean>(false);
   readonly isDraggingOver = signal<boolean>(false);
+
+  // Collasso delle card utenze (preferenza UI, persistita separatamente dai dati del gestionale)
+  readonly collapsedUtilities = signal<Record<UtilityKey, boolean>>(this.loadCollapsePrefs());
 
   // Modale Nuovo Periodo
   readonly isNewPeriodModalOpen = signal<boolean>(false);
@@ -643,6 +648,65 @@ export class App {
   // Modifica Campi Utenze e Rettifica Manuale
   onUtilityInput(): void {
     this.stateService.saveState();
+  }
+
+  // Collasso Card Utenze
+  private loadCollapsePrefs(): Record<UtilityKey, boolean> {
+    const allCollapsed: Record<UtilityKey, boolean> = { luce: true, gas: true, acqua: true };
+    try {
+      const raw = localStorage.getItem(UI_PREFS_KEY);
+      if (!raw) return allCollapsed;
+      const parsed = JSON.parse(raw);
+      if (!parsed || typeof parsed !== 'object') return allCollapsed;
+      return {
+        luce: parsed.luce !== false,
+        gas: parsed.gas !== false,
+        acqua: parsed.acqua !== false,
+      };
+    } catch {
+      return allCollapsed;
+    }
+  }
+
+  private persistCollapsePrefs(prefs: Record<UtilityKey, boolean>): void {
+    try {
+      localStorage.setItem(UI_PREFS_KEY, JSON.stringify(prefs));
+    } catch {
+      // le preferenze di layout non sono critiche: ignoriamo errori di storage
+    }
+  }
+
+  isUtilityCollapsed(utility: UtilityKey): boolean {
+    return this.collapsedUtilities()[utility];
+  }
+
+  toggleUtilityCollapse(utility: UtilityKey): void {
+    const next = { ...this.collapsedUtilities(), [utility]: !this.collapsedUtilities()[utility] };
+    this.collapsedUtilities.set(next);
+    this.persistCollapsePrefs(next);
+  }
+
+  readonly areAllUtilitiesCollapsed = computed<boolean>(() => {
+    const c = this.collapsedUtilities();
+    return c.luce && c.gas && c.acqua;
+  });
+
+  toggleAllUtilities(): void {
+    const collapse = !this.areAllUtilitiesCollapsed();
+    const next: Record<UtilityKey, boolean> = { luce: collapse, gas: collapse, acqua: collapse };
+    this.collapsedUtilities.set(next);
+    this.persistCollapsePrefs(next);
+  }
+
+  getUtilityLabel(utility: UtilityKey): string {
+    switch (utility) {
+      case 'luce':
+        return 'Energia Elettrica';
+      case 'gas':
+        return 'Gas Metano';
+      default:
+        return 'Servizio Idrico';
+    }
   }
 
   onManualOverrideInput(utility: UtilityKey, rawValue: string | number | null): void {

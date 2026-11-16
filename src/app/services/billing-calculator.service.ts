@@ -42,6 +42,14 @@ export class BillingCalculatorService {
     const pTot = Math.max(0.0001, pUs + pTenant);
 
     const warnings: string[] = [];
+
+    const peopleMatter = noMetersMode || wP > 0.0001 || deltaGen <= 0;
+    if (peopleMatter && pUs + pTenant <= 0) {
+      warnings.push(
+        'Quote persone entrambe a zero: la ripartizione a persone non è calcolabile e l\'intero importo viene attribuito a una sola parte.'
+      );
+    }
+
     if (!noMetersMode && wM > 0.0001) {
       if (genEnd < genStart) {
         warnings.push(
